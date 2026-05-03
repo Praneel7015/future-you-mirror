@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  /* Warm mocha palette */
+  --color-background: #F8F5F0;
+  --color-foreground: #2A2826;
+  --color-mocha: #A78B71;
+  --color-blush: #E8C5B5;
+  --color-care: #F5D4B8;
+  --color-without: #C9B58F;
+  --color-accent: #6B5D52;
+
+  /* Fonts */
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+:root {
+  --background: #F8F5F0;
+  --foreground: #2A2826;
+  --mocha: #A78B71;
+  --blush: #E8C5B5;
+  --care: #F5D4B8;
+  --without: #C9B58F;
+  --accent: #6B5D52;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection */
+::selection {
+  background: rgba(167, 139, 113, 0.3);
+}
+
+/* Custom range slider */
+input[type="range"].fy-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: rgba(42, 40, 38, 0.18);
+  outline: none;
+  border-radius: 999px;
+}
+
+input[type="range"].fy-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--foreground);
+  border: 2px solid var(--background);
+  box-shadow: 0 0 0 1px rgba(42, 40, 38, 0.25);
+  cursor: grab;
+}
+
+input[type="range"].fy-slider.light::-webkit-slider-thumb {
+  background: #fbf8f3;
+  border-color: rgba(42, 40, 38, 0.4);
+}
+
+/* Age scrubber */
+input[type="range"].fy-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1px;
+  background: rgba(42, 40, 38, 0.22);
+  outline: none;
+}
+
+input[type="range"].fy-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 2px;
+  height: 22px;
+  background: var(--foreground);
+  border-radius: 1px;
+  cursor: ew-resize;
+}
+
+/* Pulse animation */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.15;
+  }
+}
+
+@keyframes breathe-core {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Focus styles */
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--mocha);
+  outline-offset: 2px;
+}
