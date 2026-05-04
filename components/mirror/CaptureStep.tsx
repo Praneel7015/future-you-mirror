@@ -1,23 +1,38 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useMirror } from "@/lib/store";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
+
+type CameraState = "idle" | "live" | "captured";
 
 export default function CaptureStep() {
   const setStep = useMirror((s) => s.setStep);
   const setResult = useMirror((s) => s.setResult);
   const setError = useMirror((s) => s.setError);
 
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [statusText, setStatusText] = useState<string>("Soft light, eyes forward, no glasses.");
+  const [statusText, setStatusText] = useState("Soft light, eyes forward, no glasses.");
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+  }, []);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const submitImage = useCallback(
     async (file: File) => {
+      stopCamera();
+      setCameraState("captured");
       setError(null);
 
       const objectUrl = URL.createObjectURL(file);
@@ -45,10 +60,14 @@ export default function CaptureStep() {
         setProgress(100);
 
         if (!res.ok || "error" in data) {
-          const msg = "message" in data && data.message ? data.message : "We couldn't read this photo. Try another with a clear, frontal face.";
+          const msg =
+            "message" in data && data.message
+              ? data.message
+              : "We couldn't read this photo. Try another with a clear, frontal face.";
           setError(msg);
           setStatusText(msg);
           setProgress(null);
+          setCameraState("idle");
           return;
         }
 
@@ -61,10 +80,46 @@ export default function CaptureStep() {
         setError(msg);
         setStatusText(msg);
         setProgress(null);
+        setCameraState("idle");
       }
     },
-    [setStep, setResult, setError],
+    [setStep, setResult, setError, stopCamera],
   );
+
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraState("live");
+      setStatusText("Position your face in the oval.");
+    } catch {
+      // getUserMedia not available — fall back to file input
+      fileInputRef.current?.click();
+    }
+  }, []);
+
+  const captureFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        submitImage(new File([blob], "selfie.jpg", { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }, [submitImage]);
 
   const onDrop = useCallback(
     (accepted: File[]) => {
@@ -75,51 +130,63 @@ export default function CaptureStep() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"], "image/heic": [".heic"], "image/heif": [".heif"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/heic": [".heic"],
+      "image/heif": [".heif"],
+    },
     multiple: false,
     noClick: true,
     noKeyboard: true,
   });
 
-  const onCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) submitImage(file);
-  };
-
   return (
     <div
       {...getRootProps()}
-      className="flex-1 flex flex-col w-full relative overflow-hidden"
+      className="flex-1 flex flex-col w-full relative"
       style={{
         background: "radial-gradient(80% 80% at 50% 45%, #2D2925 0%, #1A1714 70%, #0E0C0A 100%)",
         minHeight: "100vh",
       }}
     >
       <input {...getInputProps()} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/heic,image/heif"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) submitImage(file);
+        }}
+        className="hidden"
+      />
 
       {/* vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(120% 80% at 50% 40%, transparent 30%, rgba(0,0,0,0.5) 100%)" }}
+        style={{
+          background: "radial-gradient(120% 80% at 50% 40%, transparent 30%, rgba(0,0,0,0.55) 100%)",
+        }}
       />
 
-      {/* Drag-active overlay */}
+      {/* drag overlay */}
       {isDragActive && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           style={{ background: "rgba(167,139,113,0.18)", backdropFilter: "blur(2px)" }}
         >
-          <div
-            className="font-serif text-2xl"
-            style={{ color: "#F8F5F0" }}
-          >
+          <div className="font-serif text-2xl" style={{ color: "#F8F5F0" }}>
             Drop to read
           </div>
         </div>
       )}
 
-      <div className="relative z-10 flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full">
-        <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)", fontStyle: "italic" }}>
+      <div className="relative z-10 flex-1 flex flex-col px-6 pt-16 pb-12 w-full">
+        <div
+          className="text-[10px] uppercase"
+          style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)", fontStyle: "italic" }}
+        >
           Capture
         </div>
         <div
@@ -138,6 +205,7 @@ export default function CaptureStep() {
         {/* Oval */}
         <div className="flex-1 flex items-center justify-center my-8">
           <div className="relative" style={{ width: 240, height: 320 }}>
+            {/* oval container */}
             <div
               className="absolute inset-0 overflow-hidden"
               style={{
@@ -146,11 +214,22 @@ export default function CaptureStep() {
                 boxShadow: "0 0 0 1px rgba(248,245,240,0.05) inset",
               }}
             >
-              {previewUrl ? (
+              {/* live video */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute w-full h-full object-cover"
+                style={{
+                  display: cameraState === "live" ? "block" : "none",
+                  transform: "scaleX(-1)",
+                }}
+              />
+              {/* captured preview */}
+              {previewUrl && cameraState === "captured" && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={previewUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.92 }} />
-              ) : (
-                <div className="w-full h-full" />
+                <img src={previewUrl} alt="" className="absolute w-full h-full object-cover" style={{ opacity: 0.92 }} />
               )}
             </div>
 
@@ -180,6 +259,7 @@ export default function CaptureStep() {
                   letterSpacing: "0.22em",
                   color: "rgba(248,245,240,0.7)",
                   fontVariantNumeric: "tabular-nums",
+                  whiteSpace: "nowrap",
                 }}
               >
                 READING · {Math.round(progress)}%
@@ -193,58 +273,75 @@ export default function CaptureStep() {
         </div>
 
         <div className="mt-6">
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="user"
-            onChange={onCameraChange}
-            className="hidden"
-          />
-
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={progress !== null}
-              className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
-              style={{
-                height: 52,
-                background: "#F8F5F0",
-                color: "#2A2826",
-                fontSize: 14,
-                letterSpacing: "0.02em",
-              }}
-            >
-              Take a selfie
-            </button>
-            <span className="font-serif italic text-[14px]" style={{ color: "rgba(248,245,240,0.5)" }}>
-              or
-            </span>
+            {cameraState === "live" ? (
+              <button
+                onClick={captureFrame}
+                className="flex-1 rounded-full font-medium"
+                style={{
+                  height: 52,
+                  background: "#F8F5F0",
+                  color: "#2A2826",
+                  fontSize: 14,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Capture
+              </button>
+            ) : (
+              <button
+                onClick={startCamera}
+                disabled={progress !== null}
+                className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
+                style={{
+                  height: 52,
+                  background: "#F8F5F0",
+                  color: "#2A2826",
+                  fontSize: 14,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Take a selfie
+              </button>
+            )}
+
+            {cameraState !== "live" && (
+              <>
+                <span className="font-serif italic text-[14px]" style={{ color: "rgba(248,245,240,0.5)" }}>
+                  or
+                </span>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={progress !== null}
+                  className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
+                  style={{
+                    height: 52,
+                    background: "transparent",
+                    color: "#F8F5F0",
+                    border: "1px solid rgba(248,245,240,0.4)",
+                    fontSize: 14,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Upload a photo
+                </button>
+              </>
+            )}
+          </div>
+
+          {cameraState === "live" && (
             <button
               onClick={() => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = "image/jpeg,image/png,image/heic,image/heif";
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0];
-                  if (file) submitImage(file);
-                };
-                input.click();
+                stopCamera();
+                setCameraState("idle");
+                setStatusText("Soft light, eyes forward, no glasses.");
               }}
-              disabled={progress !== null}
-              className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
-              style={{
-                height: 52,
-                background: "transparent",
-                color: "#F8F5F0",
-                border: "1px solid rgba(248,245,240,0.4)",
-                fontSize: 14,
-                letterSpacing: "0.02em",
-              }}
+              className="w-full mt-3 text-[11px]"
+              style={{ color: "rgba(248,245,240,0.4)", letterSpacing: "0.06em" }}
             >
-              Upload a photo
+              Cancel
             </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

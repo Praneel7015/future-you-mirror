@@ -30,6 +30,7 @@ html,
 body {
   background: var(--background);
   color: var(--foreground);
+  overflow-x: hidden;
 }
 
 body {
@@ -54,22 +55,47 @@ input[type="range"].fy-slider {
   background: rgba(42, 40, 38, 0.18);
   outline: none;
   border-radius: 999px;
+  touch-action: none;
+}
+
+/* Light track on dark backgrounds */
+input[type="range"].fy-slider.light {
+  background: rgba(248, 245, 240, 0.18);
 }
 
 input[type="range"].fy-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
-  background: var(--foreground);
-  border: 2px solid var(--background);
+  background: #2A2826;
+  border: 2px solid #F8F5F0;
   box-shadow: 0 0 0 1px rgba(42, 40, 38, 0.25);
   cursor: grab;
+  touch-action: none;
+}
+
+input[type="range"].fy-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #2A2826;
+  border: 2px solid #F8F5F0;
+  box-shadow: 0 0 0 1px rgba(42, 40, 38, 0.25);
+  cursor: grab;
+  touch-action: none;
+  border: none;
 }
 
 input[type="range"].fy-slider.light::-webkit-slider-thumb {
-  background: #fbf8f3;
-  border-color: rgba(42, 40, 38, 0.4);
+  background: #FBF8F3;
+  border-color: rgba(248, 245, 240, 0.5);
+  box-shadow: 0 0 0 1px rgba(248, 245, 240, 0.2);
+}
+
+input[type="range"].fy-slider.light::-moz-range-thumb {
+  background: #FBF8F3;
+  border: 2px solid rgba(248, 245, 240, 0.5);
 }
 
 /* Age scrubber */
@@ -79,15 +105,39 @@ input[type="range"].fy-scrub {
   height: 1px;
   background: rgba(42, 40, 38, 0.22);
   outline: none;
+  touch-action: none;
+}
+
+/* Light track for dark backgrounds */
+input[type="range"].fy-scrub.light {
+  background: rgba(248, 245, 240, 0.25);
 }
 
 input[type="range"].fy-scrub::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 2px;
-  height: 22px;
-  background: var(--foreground);
+  height: 24px;
+  background: #2A2826;
   border-radius: 1px;
   cursor: ew-resize;
+  touch-action: none;
+}
+
+input[type="range"].fy-scrub::-moz-range-thumb {
+  width: 2px;
+  height: 24px;
+  background: #2A2826;
+  border-radius: 1px;
+  cursor: ew-resize;
+  border: none;
+}
+
+input[type="range"].fy-scrub.light::-webkit-slider-thumb {
+  background: #F8F5F0;
+}
+
+input[type="range"].fy-scrub.light::-moz-range-thumb {
+  background: #F8F5F0;
 }
 
 /* Pulse animation */

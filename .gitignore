@@ -45,3 +45,4 @@ next-env.d.ts
 
 # Test fixtures + downloaded sample images (excluded for now)
 /samples/*
+/References

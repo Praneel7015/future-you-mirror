@@ -57,8 +57,9 @@ export const useMirror = create<MirrorState>((set) => ({
   reset: () => set(initial),
 }));
 
+// sun = "Sun protection" (0=none, 100=max). All inputs: higher is better.
 export function careScore(s: { sun: number; hyd: number; sleep: number; routine: number }): number {
-  return (s.hyd + s.sleep + s.routine + (100 - s.sun)) / 4;
+  return (s.sun + s.hyd + s.sleep + s.routine) / 4;
 }
 
 export function findClosestPhoto<T extends { res_age: number }>(photos: T[], targetAge: number): T | null {

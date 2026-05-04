@@ -48,25 +48,37 @@ function MirrorFlow() {
   }, [isDemo, setStep, setResult, setError]);
 
   return (
-    <main className="min-h-screen w-full" style={{ background: "#F8F5F0" }}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="min-h-screen w-full flex flex-col"
-        >
-          {step === "consent" && <ConsentStep />}
-          {step === "capture" && <CaptureStep />}
-          {step === "loading" && <LoadingStep />}
-          {step === "reveal" && <SkinAgeRevealStep />}
-          {step === "split" && <SplitMirrorStep />}
-          {step === "insights" && <InsightsStep />}
-          {step === "share" && <ShareStep />}
-        </motion.div>
-      </AnimatePresence>
+    <main
+      className="min-h-screen w-full flex flex-col items-center"
+      style={{ background: step === "split" || step === "capture" || step === "loading" ? "#0E0C0A" : "#F0EBE3" }}
+    >
+      <div
+        className="w-full flex-1 flex flex-col relative"
+        style={{
+          maxWidth: 430,
+          boxShadow: "0 0 80px rgba(0,0,0,0.14)",
+          overflow: "hidden",
+        }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+            className="min-h-screen w-full flex flex-col"
+          >
+            {step === "consent" && <ConsentStep />}
+            {step === "capture" && <CaptureStep />}
+            {step === "loading" && <LoadingStep />}
+            {step === "reveal" && <SkinAgeRevealStep />}
+            {step === "split" && <SplitMirrorStep />}
+            {step === "insights" && <InsightsStep />}
+            {step === "share" && <ShareStep />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </main>
   );
 }
