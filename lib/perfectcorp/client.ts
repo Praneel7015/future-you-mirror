@@ -115,7 +115,7 @@ export async function uploadFile(api: string, image: ProcessedImage): Promise<st
     headers: Object.fromEntries(
       Object.entries(putReq.headers).map(([k, v]) => [k, String(v)]),
     ),
-    body: image.bytes,
+    body: new Uint8Array(image.bytes),
   });
   if (!putRes.ok) {
     const detail = await putRes.text().catch(() => "");
