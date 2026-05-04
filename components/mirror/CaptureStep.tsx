@@ -54,14 +54,29 @@ export default function CaptureStep() {
 
       try {
         const res = await fetch("/api/analyze", { method: "POST", body: fd });
-        const data = (await res.json()) as AnalyzeResponse | { error: string; message?: string };
-
         clearInterval(fakeProgress);
         setProgress(100);
 
-        if (!res.ok || "error" in data) {
+        // Parse as text first so a non-JSON response (HTML 500 page, etc.) never throws
+        const text = await res.text();
+        let data: AnalyzeResponse | { error: string; message?: string } | null = null;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          // Server returned non-JSON — surface a helpful message
+          const msg = res.ok
+            ? "Something went wrong processing your photo. Please try again."
+            : `Server error (${res.status}). Check that API keys are configured.`;
+          setError(msg);
+          setStatusText(msg);
+          setProgress(null);
+          setCameraState("idle");
+          return;
+        }
+
+        if (!res.ok || !data || "error" in data) {
           const msg =
-            "message" in data && data.message
+            data && "message" in data && data.message
               ? data.message
               : "We couldn't read this photo. Try another with a clear, frontal face.";
           setError(msg);
@@ -76,7 +91,7 @@ export default function CaptureStep() {
         setTimeout(() => setStep("reveal"), 1800);
       } catch (err) {
         clearInterval(fakeProgress);
-        const msg = (err as Error).message ?? "Network issue — please try again.";
+        const msg = err instanceof Error ? err.message : "Network issue — please try again.";
         setError(msg);
         setStatusText(msg);
         setProgress(null);
