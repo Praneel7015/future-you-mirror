@@ -2,6 +2,7 @@
 
 import { useMirror } from "@/lib/store";
 import type { SdConcern } from "@/lib/perfectcorp/types";
+import { applyLifestyleDeltas } from "@/lib/lifestyle-deltas";
 
 type InsightTemplate = {
   finding: (score: number) => string;
@@ -70,6 +71,10 @@ const INSIGHTS: Record<SdConcern, InsightTemplate> = {
 export default function InsightsStep() {
   const result = useMirror((s) => s.result);
   const setStep = useMirror((s) => s.setStep);
+  const sun = useMirror((s) => s.sun);
+  const hyd = useMirror((s) => s.hyd);
+  const sleep = useMirror((s) => s.sleep);
+  const routine = useMirror((s) => s.routine);
 
   if (!result) {
     return (
@@ -81,8 +86,10 @@ export default function InsightsStep() {
     );
   }
 
-  const lowest = Object.entries(result.skin.concerns)
-    .map(([k, v]) => ({ key: k as SdConcern, ui: v.ui }))
+  // Rank by lifestyle-adjusted scores so insights reflect the user's actual habits
+  const adjusted = applyLifestyleDeltas(result.skin.concerns, { sun, hyd, sleep, routine });
+  const lowest = (Object.keys(result.skin.concerns) as SdConcern[])
+    .map((k) => ({ key: k, ui: adjusted[k] ?? result.skin.concerns[k].ui }))
     .sort((a, b) => a.ui - b.ui)
     .slice(0, 3);
 

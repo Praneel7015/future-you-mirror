@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMirror, careScore, findClosestPhoto } from "@/lib/store";
+import { useMirror, findClosestPhoto } from "@/lib/store";
 import type { SimulateResponse } from "@/app/api/simulate/route";
+import { applyLifestyleDeltas, withoutOverlayIntensities } from "@/lib/lifestyle-deltas";
 
 export default function SplitMirrorStep() {
   const result = useMirror((s) => s.result);
@@ -97,9 +98,13 @@ export default function SplitMirrorStep() {
   const ageMin = Math.max(25, result.aging.ageMin);
   const ageMax = result.aging.ageMax;
 
-  const score = careScore({ sun, hyd, sleep: sleepVal, routine });
-  const withoutScore = 100 - score;
-  const withoutIntensity = 0.4 + (withoutScore / 100) * 0.5;
+  // Per-concern WITHOUT-side intensities derived from lifestyle-adjusted scores
+  const ov = useMemo(() => {
+    if (!result) return { spots: 0.5, underEye: 0.5, texture: 0.5, dullness: 0.5, redness: 0.3 };
+    const adjusted = applyLifestyleDeltas(result.skin.concerns, { sun, hyd, sleep: sleepVal, routine });
+    return withoutOverlayIntensities(adjusted);
+  }, [result, sun, hyd, sleepVal, routine]);
+
 
   const sliders = [
     { key: "sun", label: "Sun protection", val: sun, set: setSun },
@@ -228,7 +233,7 @@ export default function SplitMirrorStep() {
                 right: 0,
                 top: 0,
                 objectPosition: "center 25%",
-                filter: `brightness(${0.92 - withoutIntensity * 0.15}) contrast(${1.05 + withoutIntensity * 0.08}) saturate(${0.78 - withoutIntensity * 0.26}) sepia(${0.05 + withoutIntensity * 0.20})`,
+                filter: `brightness(${(0.96 - ov.dullness * 0.18).toFixed(3)}) contrast(${(1.02 + ov.texture * 0.10).toFixed(3)}) saturate(${(0.85 - ov.dullness * 0.28).toFixed(3)}) sepia(${(0.04 + ov.redness * 0.18).toFixed(3)})`,
                 transition: "filter 700ms ease",
               }}
             />
@@ -237,7 +242,7 @@ export default function SplitMirrorStep() {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: `radial-gradient(60% 50% at 50% 40%, rgba(201,181,143,${0.14 + withoutIntensity * 0.14}), transparent 70%), linear-gradient(180deg, rgba(201,181,143,${0.18 + withoutIntensity * 0.18}) 0%, rgba(74,66,52,${0.22 + withoutIntensity * 0.18}) 100%)`,
+              background: `radial-gradient(60% 50% at 50% 40%, rgba(201,181,143,${(0.10 + ov.texture * 0.18).toFixed(3)}), transparent 70%), linear-gradient(180deg, rgba(201,181,143,${(0.14 + ov.dullness * 0.20).toFixed(3)}) 0%, rgba(74,66,52,${(0.18 + ov.texture * 0.20).toFixed(3)}) 100%)`,
               mixBlendMode: "multiply",
               transition: "background 700ms ease",
             }}
@@ -252,8 +257,19 @@ export default function SplitMirrorStep() {
                 "radial-gradient(circle at 44% 58%, rgba(120,98,72,0.14) 0, transparent 1.2%)," +
                 "radial-gradient(circle at 70% 62%, rgba(120,98,72,0.18) 0, transparent 1.3%)",
               mixBlendMode: "multiply",
-              opacity: 0.35 + withoutIntensity * 0.55,
+              opacity: 0.25 + ov.spots * 0.60,
               transition: "opacity 700ms ease",
+            }}
+          />
+          {/* Under-eye shadow — driven by dark_circle + eye_bag delta */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: "10%", right: "10%",
+              top: "32%", height: "12%",
+              background: `radial-gradient(ellipse at 50% 40%, rgba(60,44,30,${(ov.underEye * 0.38).toFixed(3)}) 0%, transparent 70%)`,
+              mixBlendMode: "multiply",
+              transition: "background 700ms ease",
             }}
           />
           <div
