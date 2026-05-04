@@ -42,3 +42,6 @@ next-env.d.ts
 
 # API response cache (dev only)
 /.cache/
+
+# Test fixtures + downloaded sample images (excluded for now)
+/samples/*
