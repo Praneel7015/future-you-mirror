@@ -157,6 +157,7 @@ export default function SplitMirrorStep() {
           value={scrubAge}
           onChange={(e) => setScrubAge(+e.target.value)}
           className="fy-scrub light w-full mt-3"
+          aria-label="Age"
         />
 
         <div
@@ -343,6 +344,7 @@ export default function SplitMirrorStep() {
                 value={s.val}
                 onChange={(e) => s.set(+e.target.value)}
                 className="fy-slider light w-full"
+                aria-label={s.label}
               />
             </div>
           ))}

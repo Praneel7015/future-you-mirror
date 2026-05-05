@@ -16,14 +16,27 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000",
+  ),
   title: "Future You Mirror",
   description:
     "See the skin you'll have — and the one you could. One selfie. Two minutes.",
   openGraph: {
+    type: "website",
+    siteName: "Future You Mirror",
     title: "Future You Mirror",
     description:
       "See the skin you'll have — and the one you could. One selfie. Two minutes.",
-    images: ["/og-image.png"],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Future You Mirror",
+    description:
+      "See the skin you'll have — and the one you could. One selfie. Two minutes.",
   },
 };
 
