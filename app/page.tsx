@@ -5,8 +5,13 @@ import Link from "next/link";
 export default function LandingPage() {
   return (
     <main
-      className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ background: "#F8F5F0", color: "#2A2826" }}
+      className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8"
+      style={{
+        background: "#F8F5F0",
+        color: "#2A2826",
+        paddingTop: "max(24px, env(safe-area-inset-top))",
+        paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+      }}
     >
       {/* Abstract editorial hero — the "mirror" motif */}
       <div className="relative w-full max-w-sm mb-10">

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMirror } from "@/lib/store";
 
@@ -77,6 +78,22 @@ export default function ConsentStep() {
           </span>
           <span className="text-[14px]" style={{ color: "#2A2826" }}>I&apos;m ready</span>
         </button>
+      </div>
+
+      <div className="mt-4">
+        <Link
+          href="/privacy"
+          className="inline-block font-serif italic"
+          style={{
+            fontSize: 13,
+            color: "var(--mocha)",
+            borderBottom: "0.5px solid rgba(167,139,113,0.4)",
+            paddingBottom: 2,
+            textDecoration: "none",
+          }}
+        >
+          Read the full ledger →
+        </Link>
       </div>
 
       <div className="mt-6">
