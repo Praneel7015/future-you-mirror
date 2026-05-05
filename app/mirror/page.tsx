@@ -28,21 +28,45 @@ function MirrorFlow() {
     if (!isDemo) return;
     let cancelled = false;
     setStep("loading");
-    fetch("/sample.json")
-      .then((r) => {
+
+    const preload = (url: string) =>
+      new Promise<void>((resolve) => {
+        if (!url) return resolve();
+        const img = new Image();
+        const timer = window.setTimeout(resolve, 12000);
+        img.onload = () => {
+          window.clearTimeout(timer);
+          resolve();
+        };
+        img.onerror = () => {
+          window.clearTimeout(timer);
+          resolve();
+        };
+        img.src = url;
+      });
+
+    (async () => {
+      try {
+        const r = await fetch("/sample.json");
         if (!r.ok) throw new Error(`sample.json fetch failed (${r.status})`);
-        return r.json() as Promise<AnalyzeResponse>;
-      })
-      .then((data) => {
+        const data = (await r.json()) as AnalyzeResponse;
         if (cancelled) return;
         setResult(data);
-        setTimeout(() => !cancelled && setStep("morph"), 1800);
-      })
-      .catch((err) => {
+
+        // Wait for every aging photo to cache before leaving the loading screen
+        const photoUrls = data.aging.photos.map((p) => p.url);
+        const minHold = new Promise<void>((res) => setTimeout(res, 1200));
+        await Promise.all([Promise.all(photoUrls.map(preload)), minHold]);
         if (cancelled) return;
-        setError(err.message ?? "Could not load sample");
+        setStep("morph");
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : "Could not load sample";
+        setError(msg);
         setStep("capture");
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };

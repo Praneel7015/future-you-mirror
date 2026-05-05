@@ -7,6 +7,38 @@ import type { AnalyzeResponse } from "@/app/api/analyze/route";
 
 type CameraState = "idle" | "live" | "captured";
 
+/**
+ * Preload an image into the browser's HTTP cache so the next <img src=...>
+ * paint is instant. Errors and timeouts resolve quietly — never reject —
+ * so a single bad URL can't stall the flow.
+ */
+function preloadImage(url: string, timeoutMs = 12000): Promise<void> {
+  return new Promise((resolve) => {
+    if (!url) return resolve();
+    const img = new Image();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const timer = window.setTimeout(finish, timeoutMs);
+    img.onload = () => {
+      window.clearTimeout(timer);
+      finish();
+    };
+    img.onerror = () => {
+      window.clearTimeout(timer);
+      finish();
+    };
+    img.src = url;
+  });
+}
+
+function preloadAll(urls: string[]): Promise<void> {
+  return Promise.all(urls.map((u) => preloadImage(u))).then(() => undefined);
+}
+
 export default function CaptureStep() {
   const setStep = useMirror((s) => s.setStep);
   const setResult = useMirror((s) => s.setResult);
@@ -88,7 +120,14 @@ export default function CaptureStep() {
 
         setResult(data);
         setStep("loading");
-        setTimeout(() => setStep("morph"), 1800);
+
+        // Stay on the loading screen until every aging photo is cached so
+        // morph + reveal + split don't render half-loaded images. We give
+        // the screen a 1.2s minimum so the messages have time to read.
+        const photoUrls = data.aging.photos.map((p) => p.url);
+        const minHold = new Promise<void>((r) => setTimeout(r, 1200));
+        await Promise.all([preloadAll(photoUrls), minHold]);
+        setStep("morph");
       } catch (err) {
         clearInterval(fakeProgress);
         const msg = err instanceof Error ? err.message : "Network issue — please try again.";
