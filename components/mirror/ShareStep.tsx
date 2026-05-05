@@ -1,15 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMirror, findClosestPhoto } from "@/lib/store";
+import { compositeSkinScore, topConcernWord } from "@/lib/skin-score";
+
+function buildShareCardUrl(params: {
+  nowUrl: string;
+  futureUrl: string;
+  score: number;
+  concern: string;
+  nowYear: string;
+  futureYear: string;
+  futureLabel: string;
+}) {
+  const sp = new URLSearchParams({
+    nowUrl: params.nowUrl,
+    futureUrl: params.futureUrl,
+    score: String(Math.round(params.score)),
+    concern: params.concern,
+    nowYear: params.nowYear,
+    futureYear: params.futureYear,
+    futureLabel: params.futureLabel,
+  });
+  return `/api/share-card?${sp.toString()}`;
+}
+
+const SaveIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 2v10M5 8.5l4 4 4-4M3 14v1.5h12V14" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7.5 10.5l3-3M5 11l-1 1a2.83 2.83 0 0 1-4-4l1-1M9 7l1-1a2.83 2.83 0 0 1 4 4l-1 1" />
+  </svg>
+);
+
+const StoryIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="2.5" width="10" height="13" rx="2" />
+    <circle cx="9" cy="6" r="0.5" fill="currentColor" />
+  </svg>
+);
 
 export default function ShareStep() {
   const result = useMirror((s) => s.result);
   const scrubAge = useMirror((s) => s.scrubAge);
   const setStep = useMirror((s) => s.setStep);
-  const [copied, setCopied] = useState(false);
+  const sun = useMirror((s) => s.sun);
+  const hyd = useMirror((s) => s.hyd);
+  const sleep = useMirror((s) => s.sleep);
+  const routine = useMirror((s) => s.routine);
 
-  if (!result) {
+  const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [statusText, setStatusText] = useState<string | null>(null);
+
+  const cardData = useMemo(() => {
+    if (!result) return null;
+    const realAge = result.aging.currentAge ?? 30;
+    const futureAge = scrubAge || 65;
+    const nowPhoto = findClosestPhoto(result.aging.photos, realAge);
+    const futurePhoto = findClosestPhoto(result.aging.photos, futureAge);
+    const score = compositeSkinScore(result.skin.concerns, { sun, hyd, sleep, routine });
+    const concern = topConcernWord(result.skin.concerns, { sun, hyd, sleep, routine });
+    const thisYear = new Date().getFullYear();
+    const yearsAhead = Math.max(0, Math.round(futureAge - realAge));
+    const futureYear = String(thisYear + yearsAhead);
+    const futureLabel = `AT ${futureAge}`;
+
+    return {
+      realAge,
+      futureAge,
+      nowUrl: nowPhoto?.url ?? "",
+      futureUrl: futurePhoto?.url ?? "",
+      score,
+      concern,
+      nowYear: String(thisYear),
+      futureYear,
+      futureLabel,
+    };
+  }, [result, scrubAge, sun, hyd, sleep, routine]);
+
+  if (!result || !cardData) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100vh" }}>
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
@@ -19,10 +93,42 @@ export default function ShareStep() {
     );
   }
 
-  const realAge = result.aging.currentAge ?? 30;
-  const skinAge = result.skin.skinAge ?? realAge;
-  const gap = Math.round(skinAge - realAge);
-  const photo = findClosestPhoto(result.aging.photos, scrubAge);
+  const cardUrl = buildShareCardUrl({
+    nowUrl: cardData.nowUrl,
+    futureUrl: cardData.futureUrl,
+    score: cardData.score,
+    concern: cardData.concern,
+    nowYear: cardData.nowYear,
+    futureYear: cardData.futureYear,
+    futureLabel: cardData.futureLabel,
+  });
+
+  const onSaveImage = async () => {
+    if (saving) return;
+    setSaving(true);
+    setStatusText("Composing your card…");
+    try {
+      const res = await fetch(cardUrl);
+      if (!res.ok) throw new Error(`Card render failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "future-you-mirror.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatusText("Saved.");
+      setTimeout(() => setStatusText(null), 1800);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not save image.";
+      setStatusText(msg);
+      setTimeout(() => setStatusText(null), 2400);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const onCopyLink = async () => {
     try {
@@ -34,23 +140,28 @@ export default function ShareStep() {
     }
   };
 
-  const onDownload = () => {
-    const payload = {
-      realAge,
-      skinAge: Math.round(skinAge),
-      skinGapYears: gap,
-      concerns: result.skin.concerns,
-      generatedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "future-you-reading.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const onShareStory = async () => {
+    try {
+      const res = await fetch(cardUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "future-you-mirror.png", { type: "image/png" });
+      const nav = navigator as Navigator & {
+        canShare?: (data: { files?: File[] }) => boolean;
+        share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+      };
+      if (nav.canShare?.({ files: [file] }) && nav.share) {
+        await nav.share({
+          files: [file],
+          title: "Future You Mirror",
+          text: "My reading from Future You Mirror.",
+        });
+      } else {
+        // Fallback: save to disk
+        await onSaveImage();
+      }
+    } catch {
+      // user cancelled or share unavailable
+    }
   };
 
   return (
@@ -63,7 +174,10 @@ export default function ShareStep() {
         ← back
       </button>
 
-      <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
+      <div
+        className="text-[10px] uppercase"
+        style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
+      >
         Keep this
       </div>
       <h1
@@ -75,175 +189,230 @@ export default function ShareStep() {
           fontWeight: 400,
         }}
       >
-        A composed card
+        Save this reading,
         <br />
-        <span style={{ color: "#A78B71", fontStyle: "italic" }}>of your reading.</span>
+        <span style={{ color: "#A78B71", fontStyle: "italic" }}>or pass it on.</span>
       </h1>
 
-      {/* Share card preview */}
-      <div className="flex-1 flex items-center justify-center">
-        <div
-          className="relative overflow-hidden"
-          style={{
-            width: 256,
-            height: 320,
-            borderRadius: 14,
-            background: "#EFE6D8",
-            boxShadow: "0 12px 28px -8px rgba(42,40,38,0.18), 0 4px 8px -4px rgba(42,40,38,0.08)",
-          }}
-        >
-          {/* Mini split mirror */}
-          <div className="absolute top-0 left-0 right-0 overflow-hidden" style={{ height: 200 }}>
-            <div className="absolute top-0 left-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
-              {photo && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={photo.url}
-                  alt=""
-                  className="absolute object-cover"
-                  style={{
-                    width: "200%",
-                    height: "100%",
-                    left: 0,
-                    top: 0,
-                    objectPosition: "center 28%",
-                    filter: "brightness(1.06) saturate(1.05) contrast(0.98)",
-                  }}
-                />
-              )}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: "linear-gradient(180deg, rgba(245,212,184,0.18) 0%, rgba(245,212,184,0.04) 100%)",
-                  mixBlendMode: "soft-light",
-                }}
-              />
-            </div>
-            <div className="absolute top-0 right-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
-              {photo && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={photo.url}
-                  alt=""
-                  className="absolute object-cover"
-                  style={{
-                    width: "200%",
-                    height: "100%",
-                    right: 0,
-                    top: 0,
-                    objectPosition: "center 28%",
-                    filter: "brightness(0.86) saturate(0.7) contrast(1.04)",
-                  }}
-                />
-              )}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: "linear-gradient(180deg, rgba(201,181,143,0.22) 0%, rgba(74,66,52,0.22) 100%)",
-                  mixBlendMode: "multiply",
-                }}
-              />
-            </div>
+      {/* Mini preview of the export card */}
+      <div className="flex-1 flex items-center justify-center my-6">
+        <div className="flex flex-col items-center">
+          <div
+            className="relative overflow-hidden"
+            style={{
+              width: 240,
+              height: 426,
+              borderRadius: 12,
+              boxShadow: "0 12px 28px -8px rgba(42,40,38,0.18)",
+              background: "linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
+            }}
+          >
             <div
-              className="absolute top-0 bottom-0"
-              style={{ left: "50%", width: 1, background: "rgba(248,245,240,0.5)" }}
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%)",
+              }}
             />
-            <div className="absolute bottom-2 left-0 right-0 flex">
+            <div
+              className="absolute left-0 right-0 text-center"
+              style={{
+                top: 24,
+                fontSize: 8,
+                letterSpacing: "0.36em",
+                color: "#A78B71",
+              }}
+            >
+              FUTURE YOU MIRROR
+            </div>
+
+            {/* twin micro-ovals */}
+            <div
+              className="absolute left-0 right-0 flex justify-center"
+              style={{ top: 64, gap: 12 }}
+            >
+              {[
+                { src: cardData.nowUrl, filter: "brightness(1.04) saturate(1.05)" },
+                { src: cardData.futureUrl, filter: "brightness(0.92) saturate(0.85)" },
+              ].map((o, i) => (
+                <div
+                  key={i}
+                  className="overflow-hidden"
+                  style={{
+                    width: 80,
+                    height: 110,
+                    borderRadius: "50% / 50%",
+                    border: "1px solid rgba(42,40,38,0.18)",
+                  }}
+                >
+                  {o.src && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={o.src}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        objectPosition: "center 28%",
+                        filter: o.filter,
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="absolute left-4 right-4 text-center"
+              style={{
+                top: 196,
+                fontFamily: "var(--font-serif)",
+                fontStyle: "italic",
+                fontSize: 18,
+                lineHeight: 1.2,
+                color: "#A78B71",
+              }}
+            >
+              a thirty-year letter,
+              <br />
+              written in skin.
+            </div>
+
+            <div
+              className="absolute left-0 right-0 text-center"
+              style={{ bottom: 56 }}
+            >
               <div
-                className="flex-1 text-center text-[8px]"
-                style={{ letterSpacing: "0.18em", color: "#F8F5F0" }}
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 32,
+                  fontWeight: 300,
+                  letterSpacing: "-0.04em",
+                  fontVariantNumeric: "tabular-nums",
+                  color: "#2A2826",
+                }}
               >
-                WITH CARE
+                {Math.round(cardData.score)}
               </div>
               <div
-                className="flex-1 text-center text-[8px]"
-                style={{ letterSpacing: "0.18em", color: "#F8F5F0" }}
+                className="mt-0.5 text-[7px] uppercase"
+                style={{ color: "#A78B71", letterSpacing: "0.32em" }}
               >
-                WITHOUT
+                SKIN SCORE · {cardData.concern.toUpperCase()}
               </div>
+            </div>
+
+            <div
+              className="absolute left-0 right-0 text-center text-[7px]"
+              style={{
+                bottom: 16,
+                letterSpacing: "0.32em",
+                color: "rgba(42,40,38,0.45)",
+              }}
+            >
+              FUTUREYOU.MIRROR
             </div>
           </div>
-
-          {/* Lower stat */}
-          <div className="absolute left-0 right-0 bottom-0" style={{ top: 200, padding: "16px 18px" }}>
-            <div className="flex items-end justify-between">
-              <div>
-                <div
-                  className="text-[8px] uppercase"
-                  style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)" }}
-                >
-                  SKIN GAP
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontSize: 56,
-                    lineHeight: 0.9,
-                    fontWeight: 300,
-                    color: "#2A2826",
-                    letterSpacing: "-0.03em",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {Math.abs(gap)}
-                  <span style={{ fontSize: 22, color: "#A78B71" }}>yr</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontStyle: "italic",
-                    fontSize: 11,
-                    color: "rgba(42,40,38,0.65)",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  My Future You
-                  <br />
-                  reading.
-                </div>
-              </div>
-            </div>
-            <div className="mt-3" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
-            <div className="text-[9px] mt-2 uppercase" style={{ letterSpacing: "0.18em", color: "rgba(42,40,38,0.5)" }}>
-              FUTURE YOU MIRROR · EDITION 01
-            </div>
+          <div
+            className="mt-3 text-[10px]"
+            style={{ color: "rgba(42,40,38,0.5)", fontStyle: "italic", letterSpacing: "0.06em" }}
+          >
+            1080 × 1920 · ready to save
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mt-8">
+      {/* Save this reading */}
+      <button
+        onClick={onSaveImage}
+        disabled={saving}
+        className="w-full rounded-full font-medium"
+        style={{
+          height: 52,
+          fontSize: 14,
+          letterSpacing: "0.02em",
+          background: "#A78B71",
+          color: "#FBF8F3",
+          opacity: saving ? 0.6 : 1,
+        }}
+      >
+        {saving ? "Composing…" : "Save this reading"}
+      </button>
+
+      {/* Three quiet share targets */}
+      <div className="grid grid-cols-3 gap-2 mt-3">
         <button
-          onClick={onDownload}
-          className="rounded-full font-medium"
+          onClick={onSaveImage}
+          className="rounded-full"
           style={{
-            height: 52,
-            fontSize: 14,
-            letterSpacing: "0.02em",
-            background: "#A78B71",
-            color: "#FBF8F3",
-          }}
-        >
-          Download
-        </button>
-        <button
-          onClick={onCopyLink}
-          className="rounded-full font-medium"
-          style={{
-            height: 52,
-            fontSize: 14,
-            letterSpacing: "0.02em",
+            height: 64,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
             background: "transparent",
             color: "#2A2826",
             border: "1px solid rgba(42,40,38,0.15)",
+            fontSize: 11,
+            letterSpacing: "0.02em",
           }}
         >
-          {copied ? "Copied" : "Copy link"}
+          <SaveIcon />
+          <span>Save image</span>
+        </button>
+        <button
+          onClick={onCopyLink}
+          className="rounded-full"
+          style={{
+            height: 64,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            background: "transparent",
+            color: "#2A2826",
+            border: "1px solid rgba(42,40,38,0.15)",
+            fontSize: 11,
+            letterSpacing: "0.02em",
+          }}
+        >
+          <LinkIcon />
+          <span>{copied ? "Copied" : "Copy link"}</span>
+        </button>
+        <button
+          onClick={onShareStory}
+          className="rounded-full"
+          style={{
+            height: 64,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            background: "transparent",
+            color: "#2A2826",
+            border: "1px solid rgba(42,40,38,0.15)",
+            fontSize: 11,
+            letterSpacing: "0.02em",
+          }}
+        >
+          <StoryIcon />
+          <span>Story</span>
         </button>
       </div>
+
       <div
-        className="text-center mt-4 text-[10px] uppercase"
+        className="text-center mt-4 text-[11px]"
+        style={{ color: "rgba(42,40,38,0.55)", fontStyle: "italic", minHeight: 16 }}
+      >
+        {statusText ?? " "}
+      </div>
+
+      <div
+        className="text-center mt-1 text-[10px] uppercase"
         style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
       >
         ⏤ HIPAA &amp; GDPR COMPLIANT VIA PERFECT CORP ⏤

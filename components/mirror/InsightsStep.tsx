@@ -3,6 +3,9 @@
 import { useMirror } from "@/lib/store";
 import type { SdConcern } from "@/lib/perfectcorp/types";
 import { applyLifestyleDeltas } from "@/lib/lifestyle-deltas";
+import { compositeSkinScore } from "@/lib/skin-score";
+import SkinScoreRing, { ScoreBandsList, bandFor } from "./SkinScoreRing";
+import ClimateCard from "./ClimateCard";
 
 type InsightTemplate = {
   finding: (score: number) => string;
@@ -86,10 +89,14 @@ export default function InsightsStep() {
     );
   }
 
+  const sliders = { sun, hyd, sleep, routine };
+  const score = compositeSkinScore(result.skin.concerns, sliders);
+  const band = bandFor(score);
+
   // Rank by lifestyle-adjusted scores so insights reflect the user's actual habits
-  const adjusted = applyLifestyleDeltas(result.skin.concerns, { sun, hyd, sleep, routine });
+  const adjusted = applyLifestyleDeltas(result.skin.concerns, sliders);
   const lowest = (Object.keys(result.skin.concerns) as SdConcern[])
-    .map((k) => ({ key: k, ui: adjusted[k] ?? result.skin.concerns[k].ui }))
+    .map((k) => ({ key: k, ui: Math.round(adjusted[k] ?? result.skin.concerns[k].ui) }))
     .sort((a, b) => a.ui - b.ui)
     .slice(0, 3);
 
@@ -107,8 +114,43 @@ export default function InsightsStep() {
       >
         Your reading
       </div>
+
+      {/* Score ring — hero */}
+      <div className="mt-8 flex justify-center">
+        <SkinScoreRing score={score} betterThan={Math.round(score)} size={200} />
+      </div>
+
+      {/* Bands */}
+      <div className="mt-10">
+        <div className="flex items-center">
+          <div className="flex-1" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
+          <div
+            className="mx-3"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontStyle: "italic",
+              fontSize: 13,
+              color: "#2A2826",
+              whiteSpace: "nowrap",
+            }}
+          >
+            the bands
+          </div>
+          <div className="flex-1" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
+        </div>
+        <div className="mt-4">
+          <ScoreBandsList activeName={band.name} />
+        </div>
+      </div>
+
+      {/* Climate insight */}
+      <div className="mt-10">
+        <ClimateCard />
+      </div>
+
+      {/* Three cards */}
       <h1
-        className="mt-2"
+        className="mt-10"
         style={{
           fontFamily: "var(--font-serif)",
           fontSize: 26,
@@ -120,7 +162,7 @@ export default function InsightsStep() {
         <span style={{ color: "#A78B71", fontStyle: "italic" }}>quietly considered.</span>
       </h1>
 
-      <div className="mt-8 space-y-3">
+      <div className="mt-6 space-y-3">
         {cards.map((c) => (
           <div
             key={c.n}
@@ -167,9 +209,7 @@ export default function InsightsStep() {
         ))}
       </div>
 
-      <div className="flex-1" />
-
-      <div className="mt-6">
+      <div className="mt-10">
         <button
           onClick={() => setStep("share")}
           className="w-full rounded-full"

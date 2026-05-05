@@ -9,6 +9,7 @@ import type { AnalyzeResponse } from "@/app/api/analyze/route";
 import ConsentStep from "@/components/mirror/ConsentStep";
 import CaptureStep from "@/components/mirror/CaptureStep";
 import LoadingStep from "@/components/mirror/LoadingStep";
+import MorphStep from "@/components/mirror/MorphStep";
 import SkinAgeRevealStep from "@/components/mirror/SkinAgeRevealStep";
 import SplitMirrorStep from "@/components/mirror/SplitMirrorStep";
 import InsightsStep from "@/components/mirror/InsightsStep";
@@ -35,7 +36,7 @@ function MirrorFlow() {
       .then((data) => {
         if (cancelled) return;
         setResult(data);
-        setTimeout(() => !cancelled && setStep("reveal"), 1800);
+        setTimeout(() => !cancelled && setStep("morph"), 1800);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -61,6 +62,7 @@ function MirrorFlow() {
           {step === "consent" && <ConsentStep />}
           {step === "capture" && <CaptureStep />}
           {step === "loading" && <LoadingStep />}
+          {step === "morph" && <MorphStep />}
           {step === "reveal" && <SkinAgeRevealStep />}
           {step === "split" && <SplitMirrorStep />}
           {step === "insights" && <InsightsStep />}

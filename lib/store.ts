@@ -5,6 +5,7 @@ export type MirrorStep =
   | "consent"
   | "capture"
   | "loading"
+  | "morph"
   | "reveal"
   | "split"
   | "insights"

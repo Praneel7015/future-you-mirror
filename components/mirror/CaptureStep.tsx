@@ -88,7 +88,7 @@ export default function CaptureStep() {
 
         setResult(data);
         setStep("loading");
-        setTimeout(() => setStep("reveal"), 1800);
+        setTimeout(() => setStep("morph"), 1800);
       } catch (err) {
         clearInterval(fakeProgress);
         const msg = err instanceof Error ? err.message : "Network issue — please try again.";
