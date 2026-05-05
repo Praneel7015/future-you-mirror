@@ -125,7 +125,10 @@ export default function CaptureStep() {
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    const ctx = canvas.getContext("2d")!;
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
