@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useMirror } from "@/lib/store";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
+import type { AnalyzeErrorBody } from "@/lib/analyze-error-types";
 
 type CameraState = "idle" | "live" | "captured";
 
@@ -52,6 +53,8 @@ export default function CaptureStep() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [statusText, setStatusText] = useState("Soft light, eyes forward, no glasses.");
+  /** Larger, brighter copy when the last attempt failed (issue-specific line from API). */
+  const [statusIsError, setStatusIsError] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -66,6 +69,7 @@ export default function CaptureStep() {
       stopCamera();
       setCameraState("captured");
       setError(null);
+      setStatusIsError(false);
 
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
@@ -91,28 +95,29 @@ export default function CaptureStep() {
 
         // Parse as text first so a non-JSON response (HTML 500 page, etc.) never throws
         const text = await res.text();
-        let data: AnalyzeResponse | { error: string; message?: string } | null = null;
+        let data: AnalyzeResponse | AnalyzeErrorBody | null = null;
         try {
           data = JSON.parse(text);
         } catch {
-          // Server returned non-JSON — surface a helpful message
           const msg = res.ok
-            ? "Something went wrong processing your photo. Please try again."
-            : `Server error (${res.status}). Check that API keys are configured.`;
+            ? "Something went wrong — please try again."
+            : `Can’t reach the server (${res.status}). Try again shortly.`;
           setError(msg);
           setStatusText(msg);
+          setStatusIsError(true);
           setProgress(null);
           setCameraState("idle");
           return;
         }
 
         if (!res.ok || !data || "error" in data) {
+          const fail = data && "error" in data ? data : null;
           const msg =
-            data && "message" in data && data.message
-              ? data.message
-              : "We couldn't read this photo. Try another with a clear, frontal face.";
+            fail?.message ??
+            "We couldn’t read this photo — try a clear, front-facing shot in soft light.";
           setError(msg);
           setStatusText(msg);
+          setStatusIsError(true);
           setProgress(null);
           setCameraState("idle");
           return;
@@ -130,9 +135,10 @@ export default function CaptureStep() {
         setStep("morph");
       } catch (err) {
         clearInterval(fakeProgress);
-        const msg = err instanceof Error ? err.message : "Network issue — please try again.";
+        const msg = err instanceof Error ? err.message : "Check your connection and try again.";
         setError(msg);
         setStatusText(msg);
+        setStatusIsError(true);
         setProgress(null);
         setCameraState("idle");
       }
@@ -151,6 +157,7 @@ export default function CaptureStep() {
         await videoRef.current.play();
       }
       setCameraState("live");
+      setStatusIsError(false);
       setStatusText("Position your face in the oval.");
     } catch {
       // getUserMedia not available — fall back to file input
@@ -325,7 +332,20 @@ export default function CaptureStep() {
           </div>
         </div>
 
-        <div className="text-center text-[12px]" style={{ color: "rgba(248,245,240,0.55)" }}>
+        <div
+          className="text-center px-3 mx-auto"
+          role={statusIsError ? "alert" : undefined}
+          style={{
+            color: statusIsError ? "rgba(248,245,240,0.96)" : "rgba(248,245,240,0.55)",
+            fontSize: statusIsError ? 20 : 12,
+            lineHeight: statusIsError ? 1.4 : 1.5,
+            fontWeight: statusIsError ? 600 : 400,
+            letterSpacing: statusIsError ? "0.012em" : undefined,
+            maxWidth: statusIsError ? 380 : undefined,
+            textShadow: statusIsError ? "0 1px 3px rgba(0,0,0,0.45)" : undefined,
+            fontVariantLigatures: "common-ligatures",
+          }}
+        >
           {statusText}
         </div>
 
@@ -391,6 +411,7 @@ export default function CaptureStep() {
               onClick={() => {
                 stopCamera();
                 setCameraState("idle");
+                setStatusIsError(false);
                 setStatusText("Soft light, eyes forward, no glasses.");
               }}
               className="w-full mt-3 text-[11px]"

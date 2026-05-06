@@ -40,7 +40,23 @@ interface PcFetchInit extends Omit<RequestInit, "headers"> {
   headers?: Record<string, string>;
 }
 
+function assertHttpUrl(url: string, context: string): void {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      throw new Error("unsupported protocol");
+    }
+  } catch {
+    throw new PerfectCorpError(
+      "misconfigured_data_host",
+      `${context}: invalid URL (check PERFECT_CORP_DATA_BASE and API responses)`,
+      500,
+    );
+  }
+}
+
 async function pcFetch(url: string, init: PcFetchInit = {}, retried = false): Promise<Response> {
+  assertHttpUrl(url, "pcFetch");
   const token = await getAccessToken();
   const res = await fetch(url, {
     ...init,
@@ -109,6 +125,15 @@ export async function uploadFile(api: string, image: ProcessedImage): Promise<st
 
   const file = initData.data.files[0];
   const putReq = file.requests[0];
+  if (!putReq?.url) {
+    throw new PerfectCorpError(
+      "invalid_upload_url",
+      `Upload init missing presigned URL for ${api}`,
+      initRes.status,
+      initData,
+    );
+  }
+  assertHttpUrl(putReq.url, `upload PUT (${api})`);
 
   const putRes = await fetch(putReq.url, {
     method: putReq.method,
