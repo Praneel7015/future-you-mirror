@@ -70,24 +70,13 @@ export async function processUpload(input: Buffer, mime: string): Promise<Proces
 
   const bytes = await resized.jpeg({ quality: 90, mozjpeg: true }).toBuffer();
   const finalMeta = await sharp(bytes).metadata();
-  const outW = finalMeta.width ?? 0;
-  const outH = finalMeta.height ?? 0;
-  const finalShort = Math.min(outW, outH);
-
-  if (outW && outH && finalShort < MIN_SHORT_SIDE) {
-    throw new ImageError(
-      "image_too_small",
-      `After sizing, the image is ${outW}×${outH}; short side must be ≥ ${MIN_SHORT_SIDE}px — move closer or use a higher-resolution photo.`,
-    );
-  }
-
   const hash = crypto.createHash("sha256").update(bytes).digest("hex");
 
   return {
     bytes,
     hash,
-    width: outW,
-    height: outH,
+    width: finalMeta.width ?? 0,
+    height: finalMeta.height ?? 0,
     contentType: "image/jpeg",
   };
 }
