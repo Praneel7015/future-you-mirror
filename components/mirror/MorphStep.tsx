@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useMirror, findClosestPhoto } from "@/lib/store";
 
-const TOTAL_MS = 2400;
+/** Full morph dwell time before advancing to reveal. */
+const TOTAL_MS = 3400;
+/** Time until crossfade reaches full “future” (t = 1); remainder holds on final frame. */
+const FADE_MS = 2300;
 
 export default function MorphStep() {
   const result = useMirror((s) => s.result);
   const setStep = useMirror((s) => s.setStep);
-  const scrubAge = useMirror((s) => s.scrubAge);
 
   const [t, setT] = useState(0);
   const startRef = useRef<number | null>(null);
@@ -18,7 +20,7 @@ export default function MorphStep() {
     const tick = (now: number) => {
       if (startRef.current === null) startRef.current = now;
       const elapsed = now - startRef.current;
-      const progress = Math.min(1, elapsed / 1600);
+      const progress = Math.min(1, elapsed / FADE_MS);
       setT(progress);
       if (elapsed < TOTAL_MS) {
         rafRef.current = requestAnimationFrame(tick);
@@ -33,7 +35,10 @@ export default function MorphStep() {
   }, [setStep]);
 
   const realAge = result?.aging.currentAge ?? 30;
-  const futureAge = scrubAge || 65;
+  const ageMin = result?.aging.ageMin ?? 12;
+  const ageMax = result?.aging.ageMax ?? 70;
+  /** Preview “+30 years” face for this step (does not mutate scrub slider until reveal continues). */
+  const futureAge = Math.min(ageMax, Math.max(ageMin, Math.round(realAge + 30)));
   const photos = result?.aging.photos ?? [];
   const nowPhoto = findClosestPhoto(photos, realAge);
   const futurePhoto = findClosestPhoto(photos, futureAge);
@@ -69,7 +74,7 @@ export default function MorphStep() {
               letterSpacing: "0.32em",
               color: "rgba(248,245,240,0.7)",
               opacity: t < 0.5 ? 1 : 0,
-              transition: "opacity 600ms ease-in-out",
+              transition: "opacity 750ms ease-in-out",
             }}
           >
             READING COMPLETE
@@ -80,7 +85,7 @@ export default function MorphStep() {
               letterSpacing: "0.32em",
               color: "rgba(245,212,184,0.85)",
               opacity: t >= 0.5 ? 1 : 0,
-              transition: "opacity 600ms ease-in-out",
+              transition: "opacity 750ms ease-in-out",
             }}
           >
             AT AGE {Math.round(futureAge)}
@@ -113,7 +118,7 @@ export default function MorphStep() {
                 objectPosition: "center 24%",
                 filter: "brightness(1.02) saturate(1.05)",
                 opacity: 1 - t,
-                transition: "opacity 800ms cubic-bezier(0.16,1,0.3,1)",
+                transition: "opacity 1100ms cubic-bezier(0.16,1,0.3,1)",
               }}
             />
           )}
@@ -130,7 +135,7 @@ export default function MorphStep() {
                 objectPosition: "center 24%",
                 filter: "brightness(0.86) saturate(0.78) contrast(1.04) sepia(0.08)",
                 opacity: t,
-                transition: "opacity 800ms cubic-bezier(0.16,1,0.3,1)",
+                transition: "opacity 1100ms cubic-bezier(0.16,1,0.3,1)",
               }}
             />
           )}
@@ -182,7 +187,7 @@ export default function MorphStep() {
               fontWeight: 400,
               color: "#F8F5F0",
               opacity: i === captionAt ? 1 : 0,
-              transition: "opacity 600ms ease-in-out",
+              transition: "opacity 750ms ease-in-out",
             }}
           >
             {c}

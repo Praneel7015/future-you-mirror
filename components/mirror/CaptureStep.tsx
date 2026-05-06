@@ -123,9 +123,9 @@ export default function CaptureStep() {
 
         // Stay on the loading screen until every aging photo is cached so
         // morph + reveal + split don't render half-loaded images. We give
-        // the screen a 1.2s minimum so the messages have time to read.
+        // the screen a minimum hold so loading copy has time to be read.
         const photoUrls = data.aging.photos.map((p) => p.url);
-        const minHold = new Promise<void>((r) => setTimeout(r, 1200));
+        const minHold = new Promise<void>((r) => setTimeout(r, 2200));
         await Promise.all([preloadAll(photoUrls), minHold]);
         setStep("morph");
       } catch (err) {

@@ -23,21 +23,35 @@ async function inlineImage(url: string): Promise<string | null> {
   }
 }
 
-export async function GET(req: NextRequest) {
-  const sp = req.nextUrl.searchParams;
-  const nowUrl = sp.get("nowUrl") ?? "";
-  const futureUrl = sp.get("futureUrl") ?? "";
-  const score = Math.max(0, Math.min(100, Number(sp.get("score") ?? "73")));
-  const concern = (sp.get("concern") ?? "hydration").slice(0, 24);
-  const nowYear = (sp.get("nowYear") ?? String(new Date().getFullYear())).slice(0, 8);
-  const futureYear = (sp.get("futureYear") ?? String(new Date().getFullYear() + 35)).slice(0, 8);
-  const futureLabel = (sp.get("futureLabel") ?? "AT SIXTY-FIVE").slice(0, 32);
+export type ShareCardFields = {
+  nowUrl: string;
+  futureUrl: string;
+  score: number;
+  concern: string;
+  nowYear: string;
+  futureYear: string;
+  futureLabel: string;
+};
 
-  // Pre-fetch both photos in parallel so we don't double-pay latency
-  const [nowSrc, futureSrc] = await Promise.all([
-    inlineImage(nowUrl),
-    inlineImage(futureUrl),
-  ]);
+export function normalizeSharePayload(input: Partial<ShareCardFields>): ShareCardFields {
+  return {
+    nowUrl: typeof input.nowUrl === "string" ? input.nowUrl : "",
+    futureUrl: typeof input.futureUrl === "string" ? input.futureUrl : "",
+    score: Math.max(0, Math.min(100, Number.isFinite(Number(input.score)) ? Number(input.score) : 73)),
+    concern: (typeof input.concern === "string" ? input.concern : "hydration").slice(0, 24),
+    nowYear: (typeof input.nowYear === "string" ? input.nowYear : String(new Date().getFullYear())).slice(0, 8),
+    futureYear: (typeof input.futureYear === "string" ? input.futureYear : String(new Date().getFullYear() + 30)).slice(
+      0,
+      8,
+    ),
+    futureLabel: (typeof input.futureLabel === "string" ? input.futureLabel : "AT SIXTY-FIVE").slice(0, 32),
+  };
+}
+
+async function renderShareCardImageResponse(fields: ShareCardFields): Promise<ImageResponse> {
+  const { nowUrl, futureUrl, score, concern, nowYear, futureYear, futureLabel } = fields;
+
+  const [nowSrc, futureSrc] = await Promise.all([inlineImage(nowUrl), inlineImage(futureUrl)]);
 
   const radius = 56;
   const filledArc = (score / 100) * 2 * Math.PI * radius;
@@ -399,5 +413,44 @@ export async function GET(req: NextRequest) {
       width: W,
       height: H,
     },
+  );
+}
+
+export async function GET(req: NextRequest) {
+  const sp = req.nextUrl.searchParams;
+  return renderShareCardImageResponse(
+    normalizeSharePayload({
+      nowUrl: sp.get("nowUrl") ?? "",
+      futureUrl: sp.get("futureUrl") ?? "",
+      score: Number(sp.get("score") ?? "73"),
+      concern: sp.get("concern") ?? "hydration",
+      nowYear: sp.get("nowYear") ?? String(new Date().getFullYear()),
+      futureYear: sp.get("futureYear") ?? String(new Date().getFullYear() + 30),
+      futureLabel: sp.get("futureLabel") ?? "AT SIXTY-FIVE",
+    }),
+  );
+}
+
+export async function POST(req: NextRequest) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "invalid_json", message: "Body must be JSON." }, { status: 400 });
+  }
+  if (!body || typeof body !== "object") {
+    return Response.json({ error: "invalid_body", message: "Expected a JSON object." }, { status: 400 });
+  }
+  const o = body as Record<string, unknown>;
+  return renderShareCardImageResponse(
+    normalizeSharePayload({
+      nowUrl: typeof o.nowUrl === "string" ? o.nowUrl : undefined,
+      futureUrl: typeof o.futureUrl === "string" ? o.futureUrl : undefined,
+      score: typeof o.score === "number" ? o.score : Number(o.score),
+      concern: typeof o.concern === "string" ? o.concern : undefined,
+      nowYear: typeof o.nowYear === "string" ? o.nowYear : undefined,
+      futureYear: typeof o.futureYear === "string" ? o.futureYear : undefined,
+      futureLabel: typeof o.futureLabel === "string" ? o.futureLabel : undefined,
+    }),
   );
 }

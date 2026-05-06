@@ -44,8 +44,9 @@ export default function SkinAgeRevealStep() {
   const sliver = findClosestPhoto(result.aging.photos, realAge);
 
   const onContinue = () => {
-    // Default scrubber at age 45 (or +15 from current, whichever fits the photo range)
-    const target = Math.max(result.aging.ageMin, Math.min(result.aging.ageMax, Math.max(45, realAge + 15)));
+    // Align split scrubber with morph preview (+30 years, clamped to API range)
+    const desired = Math.round(realAge + 30);
+    const target = Math.max(result.aging.ageMin, Math.min(result.aging.ageMax, desired));
     setScrubAge(target);
     setStep("split");
   };

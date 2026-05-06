@@ -1,11 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
+
+const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
+const TAP_MS = 0.12;
+
+const MotionLink = motion(Link);
+
+function tapOutlinePrimary() {
+  return {
+    scale: 0.985,
+    boxShadow:
+      "0 0 0 3px rgba(167, 139, 113, 0.55), inset 0 0 0 1px rgba(255, 253, 249, 0.28)",
+    filter: "brightness(0.96)",
+  };
+}
+
+function tapOutlineSecondary() {
+  return {
+    scale: 0.985,
+    backgroundColor: "rgba(167,139,113,0.10)",
+    borderColor: "rgba(167,139,113,0.45)",
+    boxShadow: "0 0 0 3px rgba(167,139,113,0.35)",
+    color: "#2A2826",
+  };
+}
 
 export default function LandingPage() {
+  const reduced = useReducedMotion();
+
+  const fadeUp = reduced
+    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
+    : { hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } };
+
+  const dur = reduced ? 0 : 0.65;
+  const easeUp = reduced ? undefined : ({ duration: dur, ease: EASE_MIRROR } as const);
+
   return (
     <main
-      className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8"
+      className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8 overflow-x-hidden"
       style={{
         background: "#F8F5F0",
         color: "#2A2826",
@@ -14,7 +48,12 @@ export default function LandingPage() {
       }}
     >
       {/* Abstract editorial hero — the "mirror" motif */}
-      <div className="relative w-full max-w-sm mb-10">
+      <motion.div
+        className="relative w-full max-w-sm mb-10"
+        initial={fadeUp.hidden}
+        animate={fadeUp.visible}
+        transition={easeUp}
+      >
         <div
           className="w-full rounded-2xl overflow-hidden relative"
           style={{
@@ -24,12 +63,12 @@ export default function LandingPage() {
           }}
         >
           {/* Oval mirror motif */}
-          <div
+          <motion.div
             className="absolute"
+            aria-hidden
             style={{
               left: "50%",
               top: "50%",
-              transform: "translate(-50%, -50%)",
               width: 180,
               height: 230,
               borderRadius: "50%",
@@ -37,37 +76,82 @@ export default function LandingPage() {
                 "radial-gradient(60% 50% at 50% 40%, rgba(255,253,249,0.55), rgba(255,253,249,0.0) 70%)",
               border: "1px solid rgba(255,253,249,0.4)",
             }}
+            initial={
+              reduced
+                ? { opacity: 1, scale: 1, x: "-50%", y: "-50%" }
+                : { opacity: 0, scale: 0.96, x: "-50%", y: "-50%" }
+            }
+            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+            transition={
+              reduced
+                ? undefined
+                : { duration: 0.75, ease: EASE_MIRROR, delay: 0.12 }
+            }
           />
-          <div
+          <motion.div
             className="absolute"
+            aria-hidden
             style={{
               left: "50%",
               top: "50%",
-              transform: "translate(-50%, -50%)",
               width: 110,
               height: 145,
               borderRadius: "50%",
               border: "1px solid rgba(42,40,38,0.18)",
             }}
+            initial={
+              reduced
+                ? { opacity: 1, scale: 1, x: "-50%", y: "-50%" }
+                : { opacity: 0, scale: 0.94, x: "-50%", y: "-50%" }
+            }
+            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+            transition={
+              reduced ? undefined : { duration: 0.7, ease: EASE_MIRROR, delay: 0.22 }
+            }
           />
-          <div
+          <motion.div
             className="absolute bottom-4 left-5 text-[10px] tracking-widest"
             style={{ color: "rgba(42,40,38,0.5)", fontFamily: "var(--font-inter)" }}
+            initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              reduced ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.42 }
+            }
           >
             EDITION · Nº 01
-          </div>
-          <div
+          </motion.div>
+          <motion.div
             className="absolute bottom-4 right-5 text-[10px] tracking-widest"
             style={{ color: "rgba(42,40,38,0.5)", fontFamily: "var(--font-inter)" }}
+            initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              reduced ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.48 }
+            }
           >
             SPRING — 2026
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Headline */}
-      <div className="max-w-sm w-full">
-        <h1
+      {/* Headline + CTAs — stagger matches mirror flow (calm opacity crossfades) */}
+      <motion.div
+        className="max-w-sm w-full"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: {
+            transition: {
+              staggerChildren: reduced ? 0 : 0.11,
+              delayChildren: reduced ? 0 : 0.2,
+            },
+          },
+        }}
+      >
+        <motion.h1
+          variants={fadeUp}
+          transition={easeUp}
           style={{
             fontFamily: "var(--font-serif)",
             fontSize: 38,
@@ -78,23 +162,22 @@ export default function LandingPage() {
         >
           See the skin you&apos;ll have.
           <br />
-          <span style={{ fontStyle: "italic", color: "#A78B71" }}>
-            And the one you could.
-          </span>
-        </h1>
+          <span style={{ fontStyle: "italic", color: "#A78B71" }}>And the one you could.</span>
+        </motion.h1>
 
-        <p
+        <motion.p
           className="mt-5 text-sm leading-relaxed"
           style={{ color: "rgba(42,40,38,0.7)", maxWidth: 320 }}
+          variants={fadeUp}
+          transition={easeUp}
         >
           One selfie. Two minutes. A question you&apos;ve never been asked.
-        </p>
+        </motion.p>
 
-        {/* CTAs */}
-        <div className="mt-10 space-y-4">
-          <Link
+        <motion.div className="mt-10 space-y-4" variants={fadeUp} transition={easeUp}>
+          <MotionLink
             href="/mirror"
-            className="flex items-center justify-center w-full rounded-full text-[15px] font-medium transition-colors"
+            className="flex items-center justify-center w-full rounded-full text-[15px] font-medium"
             style={{
               height: 56,
               background: "#A78B71",
@@ -102,13 +185,15 @@ export default function LandingPage() {
               letterSpacing: "0.02em",
               fontFamily: "var(--font-sans)",
             }}
+            whileTap={reduced ? undefined : tapOutlinePrimary()}
+            transition={{ type: "tween", duration: TAP_MS, ease: EASE_MIRROR }}
           >
             Begin the Mirror Test
-          </Link>
+          </MotionLink>
 
-          <Link
+          <MotionLink
             href="/mirror?demo=true"
-            className="flex items-center justify-center w-full rounded-full text-[14px] transition-colors"
+            className="flex items-center justify-center w-full rounded-full text-[14px]"
             style={{
               height: 48,
               background: "transparent",
@@ -117,18 +202,42 @@ export default function LandingPage() {
               letterSpacing: "0.02em",
               fontFamily: "var(--font-sans)",
             }}
+            whileTap={reduced ? undefined : tapOutlineSecondary()}
+            transition={{ type: "tween", duration: TAP_MS, ease: EASE_MIRROR }}
           >
             Try with sample photo
-          </Link>
-        </div>
+          </MotionLink>
+        </motion.div>
 
-        <p
+        <motion.p
           className="mt-6 text-center text-[10px]"
           style={{ color: "#A78B71", letterSpacing: "0.18em" }}
+          variants={fadeUp}
+          transition={easeUp}
         >
           YOUR PHOTO NEVER LEAVES YOUR DEVICE UNENCRYPTED
-        </p>
-      </div>
+        </motion.p>
+
+        <motion.div className="mt-5 text-center" variants={fadeUp} transition={easeUp}>
+          <a
+            href="https://www.praneel.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block transition-opacity hover:opacity-80"
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              color: "rgba(42,40,38,0.45)",
+              textDecoration: "none",
+              borderBottom: "0.5px solid rgba(167,139,113,0.35)",
+              paddingBottom: 2,
+            }}
+          >
+            Made By Praneel
+          </a>
+        </motion.div>
+      </motion.div>
     </main>
   );
 }

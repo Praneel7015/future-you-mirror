@@ -12,7 +12,7 @@ export default function LoadingStep() {
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setActive((a) => (a + 1) % LINES.length), 1400);
+    const id = setInterval(() => setActive((a) => (a + 1) % LINES.length), 2000);
     return () => clearInterval(id);
   }, []);
 
@@ -56,10 +56,10 @@ export default function LoadingStep() {
                 fontWeight: 300,
                 color: "#F8F5F0",
                 opacity: i === active ? 1 : 0.32,
-                marginBottom: 18,
+               marginBottom: 22,
                 letterSpacing: "0.005em",
                 textWrap: "pretty" as const,
-                transition: "opacity 800ms ease-in-out",
+                transition: "opacity 1100ms ease-in-out",
               }}
             >
               {line}

@@ -55,7 +55,7 @@ function MirrorFlow() {
 
         // Wait for every aging photo to cache before leaving the loading screen
         const photoUrls = data.aging.photos.map((p) => p.url);
-        const minHold = new Promise<void>((res) => setTimeout(res, 1200));
+        const minHold = new Promise<void>((res) => setTimeout(res, 2200));
         await Promise.all([Promise.all(photoUrls.map(preload)), minHold]);
         if (cancelled) return;
         setStep("morph");

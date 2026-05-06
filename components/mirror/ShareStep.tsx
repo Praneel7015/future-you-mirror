@@ -22,10 +22,19 @@ const SaveIcon = () => (
 );
 
 const LinkIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7.5 10.5l3-3" />
-    <path d="M5 11l-1 1a2.83 2.83 0 0 1-4-4l1-1" transform="translate(3.5 0)" />
-    <path d="M9 7l1-1a2.83 2.83 0 0 1 4 4l-1 1" />
+  <svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" />
+    <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" />
   </svg>
 );
 
@@ -36,7 +45,7 @@ const StoryIcon = () => (
   </svg>
 );
 
-function buildShareCardUrl(params: {
+type ShareCardPostBody = {
   nowUrl: string;
   futureUrl: string;
   score: number;
@@ -44,17 +53,13 @@ function buildShareCardUrl(params: {
   nowYear: string;
   futureYear: string;
   futureLabel: string;
-}) {
-  const sp = new URLSearchParams({
-    nowUrl: params.nowUrl,
-    futureUrl: params.futureUrl,
-    score: String(Math.round(params.score)),
-    concern: params.concern,
-    nowYear: params.nowYear,
-    futureYear: params.futureYear,
-    futureLabel: params.futureLabel,
-  });
-  return `/api/share-card?${sp.toString()}`;
+};
+
+function mirrorEntryUrl(): string {
+  const u = new URL("/mirror", window.location.origin);
+  const demo = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("demo") : null;
+  if (demo === "true") u.searchParams.set("demo", "true");
+  return u.href;
 }
 
 export default function ShareStep() {
@@ -66,13 +71,13 @@ export default function ShareStep() {
   const routine = useMirror((s) => s.routine);
 
   const [copied, setCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
 
   const cardData = useMemo(() => {
     if (!result) return null;
     const realAge = Math.round(result.aging.currentAge ?? 30);
-    // Future = 40 years from now, clamped to what Perfect Corp returned.
+    // Future portrait = chronological age + 30, clamped to Perfect Corp outputs.
     const desiredFuture = realAge + 30;
     const futureAge = Math.min(result.aging.ageMax, Math.max(result.aging.ageMin, desiredFuture));
     const nowPhoto = findClosestPhoto(result.aging.photos, realAge);
@@ -107,55 +112,101 @@ export default function ShareStep() {
     );
   }
 
-  const cardUrl = buildShareCardUrl({
+  const cardPostBody = (): ShareCardPostBody => ({
     nowUrl: cardData.nowUrl,
     futureUrl: cardData.futureUrl,
-    score: cardData.score,
+    score: Math.round(cardData.score),
     concern: cardData.concern,
     nowYear: cardData.nowYear,
     futureYear: cardData.futureYear,
     futureLabel: cardData.futureLabel,
   });
 
-  const onSaveImage = async () => {
-    if (saving) return;
-    setSaving(true);
+  async function fetchShareCardBlob(): Promise<Blob> {
+    const res = await fetch("/api/share-card", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cardPostBody()),
+      cache: "no-store",
+    });
+    const ct = res.headers.get("content-type") ?? "";
+    if (!res.ok) {
+      let detail = "";
+      try {
+        detail = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+      } catch {
+        detail = "";
+      }
+      throw new Error(`Could not compose card (${res.status}). ${detail.slice(0, 160)}`);
+    }
+    const blob = await res.blob();
+    if (blob.size === 0) throw new Error("Server returned an empty image.");
+    return blob;
+  }
+
+  const triggerDownloadFromBlob = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "future-you-mirror.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1600);
+  };
+
+  const onSaveReading = async () => {
+    if (cardBusy) return;
+    setCardBusy(true);
     setStatusText("Composing your card…");
     try {
-      const res = await fetch(cardUrl, { cache: "no-store" });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(`Card render failed (${res.status}). ${detail.slice(0, 120)}`);
-      }
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error("Server returned an empty image.");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "future-you-mirror.png";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // Revoke after a tick so Safari can complete the download
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      setStatusText("Saved.");
-      setTimeout(() => setStatusText(null), 1800);
+      const blob = await fetchShareCardBlob();
+      triggerDownloadFromBlob(blob);
+      setStatusText("Saved to your downloads.");
+      setTimeout(() => setStatusText(null), 2200);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not save image.";
+      const msg = err instanceof Error ? err.message : "Could not save.";
       setStatusText(msg);
-      setTimeout(() => setStatusText(null), 3200);
+      setTimeout(() => setStatusText(null), 4000);
     } finally {
-      setSaving(false);
+      setCardBusy(false);
+    }
+  };
+
+  /** Opens PNG in a new tab for long‑press Save; falls back to download if pop-ups are blocked. */
+  const onOpenImageTab = async () => {
+    if (cardBusy) return;
+    setCardBusy(true);
+    setStatusText("Opening PNG…");
+    try {
+      const blob = await fetchShareCardBlob();
+      const url = URL.createObjectURL(blob);
+      const popup = window.open(url, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        triggerDownloadFromBlob(blob);
+        URL.revokeObjectURL(url);
+        setStatusText("Popup blocked — saved to downloads instead.");
+        setTimeout(() => setStatusText(null), 3400);
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 180000);
+      setStatusText("In the image tab: use your browser menu to save.");
+      setTimeout(() => setStatusText(null), 4200);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not open PNG.";
+      setStatusText(msg);
+      setTimeout(() => setStatusText(null), 4000);
+    } finally {
+      setCardBusy(false);
     }
   };
 
   const onCopyLink = async () => {
-    const link = window.location.origin;
+    const link = mirrorEntryUrl();
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(link);
       } else {
-        // Fallback for non-secure contexts
         const ta = document.createElement("textarea");
         ta.value = link;
         ta.style.position = "fixed";
@@ -166,38 +217,85 @@ export default function ShareStep() {
         document.body.removeChild(ta);
       }
       setCopied(true);
-      setStatusText("Link copied.");
+      setStatusText("Mirror link copied.");
       setTimeout(() => {
         setCopied(false);
         setStatusText(null);
-      }, 1800);
+      }, 2000);
     } catch {
-      setStatusText("Couldn't copy — long-press the URL bar instead.");
-      setTimeout(() => setStatusText(null), 2400);
+      setStatusText("Couldn't copy — long-press the address bar.");
+      setTimeout(() => setStatusText(null), 2600);
     }
   };
 
   const onShareStory = async () => {
+    if (cardBusy) return;
+    const pageUrl = mirrorEntryUrl();
+    setCardBusy(true);
+    setStatusText("Preparing share…");
     try {
-      const res = await fetch(cardUrl, { cache: "no-store" });
-      if (!res.ok) throw new Error(`Card fetch failed (${res.status})`);
-      const blob = await res.blob();
+      const blob = await fetchShareCardBlob();
       const file = new File([blob], "future-you-mirror.png", { type: "image/png" });
       const nav = navigator as Navigator & {
         canShare?: (data: { files?: File[] }) => boolean;
-        share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+        share?: (data: { files?: File[]; title?: string; text?: string; url?: string }) => Promise<void>;
       };
-      if (nav.canShare?.({ files: [file] }) && nav.share) {
-        await nav.share({
-          files: [file],
-          title: "Future You Mirror",
-          text: "My reading from Future You Mirror.",
-        });
-      } else {
-        await onSaveImage();
+
+      if (typeof nav.share === "function") {
+        const canFiles = typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+        try {
+          if (canFiles) {
+            try {
+              await nav.share({
+                files: [file],
+                title: "Future You Mirror",
+                text: "My Future You Mirror reading.",
+                url: pageUrl,
+              });
+            } catch {
+              await nav.share({
+                files: [file],
+                title: "Future You Mirror",
+                text: "My Future You Mirror reading.",
+              });
+            }
+          } else {
+            await nav.share({
+              title: "Future You Mirror",
+              text: `My Future You Mirror reading — try it here: ${pageUrl}`,
+              url: pageUrl,
+            });
+          }
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            setStatusText(null);
+            return;
+          }
+          throw err;
+        }
+        setStatusText(null);
+        return;
       }
-    } catch {
-      // user cancelled or share unavailable — silent
+
+      setStatusText("Sharing not available here — opening PNG…");
+      const url = URL.createObjectURL(blob);
+      const popup = window.open(url, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        triggerDownloadFromBlob(blob);
+        URL.revokeObjectURL(url);
+        setStatusText("Saved to downloads instead.");
+        setTimeout(() => setStatusText(null), 3200);
+      } else {
+        setTimeout(() => URL.revokeObjectURL(url), 180000);
+        setStatusText("Use the image tab to save, or try on your phone for Instagram.");
+        setTimeout(() => setStatusText(null), 4200);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not share.";
+      setStatusText(msg);
+      setTimeout(() => setStatusText(null), 4000);
+    } finally {
+      setCardBusy(false);
     }
   };
 
@@ -507,10 +605,11 @@ export default function ShareStep() {
         </div>
       </div>
 
-      {/* Save this reading */}
+      {/* Save — download card PNG */}
       <button
-        onClick={onSaveImage}
-        disabled={saving}
+        type="button"
+        onClick={onSaveReading}
+        disabled={cardBusy}
         className="w-full rounded-full font-medium"
         style={{
           height: 52,
@@ -518,17 +617,18 @@ export default function ShareStep() {
           letterSpacing: "0.02em",
           background: "#A78B71",
           color: "#FBF8F3",
-          opacity: saving ? 0.6 : 1,
+          opacity: cardBusy ? 0.6 : 1,
         }}
       >
-        {saving ? "Composing…" : "Save this reading"}
+        {cardBusy ? "Working…" : "Save this reading"}
       </button>
 
-      {/* Three quiet share targets */}
+      {/* Save image opens tab; Story uses native share; Copy copies app link */}
       <div className="grid grid-cols-3 gap-2 mt-3">
         <button
-          onClick={onSaveImage}
-          disabled={saving}
+          type="button"
+          onClick={onOpenImageTab}
+          disabled={cardBusy}
           className="rounded-full"
           style={{
             height: 64,
@@ -542,13 +642,14 @@ export default function ShareStep() {
             border: "1px solid rgba(42,40,38,0.15)",
             fontSize: 11,
             letterSpacing: "0.02em",
-            opacity: saving ? 0.6 : 1,
+            opacity: cardBusy ? 0.55 : 1,
           }}
         >
           <SaveIcon />
           <span>Save image</span>
         </button>
         <button
+          type="button"
           onClick={onCopyLink}
           className="rounded-full"
           style={{
@@ -569,7 +670,9 @@ export default function ShareStep() {
           <span>{copied ? "Copied" : "Copy link"}</span>
         </button>
         <button
+          type="button"
           onClick={onShareStory}
+          disabled={cardBusy}
           className="rounded-full"
           style={{
             height: 64,
@@ -583,6 +686,7 @@ export default function ShareStep() {
             border: "1px solid rgba(42,40,38,0.15)",
             fontSize: 11,
             letterSpacing: "0.02em",
+            opacity: cardBusy ? 0.55 : 1,
           }}
         >
           <StoryIcon />
@@ -602,6 +706,26 @@ export default function ShareStep() {
         style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
       >
         ⏤ HIPAA &amp; GDPR COMPLIANT VIA PERFECT CORP ⏤
+      </div>
+
+      <div className="text-center mt-4">
+        <a
+          href="https://www.praneel.tech"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block transition-opacity hover:opacity-80"
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: 10,
+            letterSpacing: "0.14em",
+            color: "rgba(42,40,38,0.45)",
+            textDecoration: "none",
+            borderBottom: "0.5px solid rgba(167,139,113,0.35)",
+            paddingBottom: 2,
+          }}
+        >
+          Made By Praneel S.
+        </a>
       </div>
     </div>
   );
