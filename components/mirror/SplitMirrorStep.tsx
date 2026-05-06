@@ -45,11 +45,20 @@ export default function SplitMirrorStep() {
   const [simLoading, setSimLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSimKey = useRef<string>("");
+  const prevPhotoUrlRef = useRef<string | undefined>(undefined);
 
   const photo = useMemo(() => {
     if (!result) return null;
     return findClosestPhoto(result.aging.photos, scrubAge);
   }, [result, scrubAge]);
+
+  const photoUrl = photo?.url;
+  if (photoUrl !== prevPhotoUrlRef.current) {
+    prevPhotoUrlRef.current = photoUrl;
+    if (simUrl !== null) {
+      setSimUrl(null);
+    }
+  }
 
   const simParams = useMemo(() => ({
     radiance: (effHyd * 0.4 + effRoutine * 0.3 + effSleep * 0.3) / 100,
@@ -94,10 +103,6 @@ export default function SplitMirrorStep() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [photo, simParams]);
-
-  useEffect(() => {
-    setSimUrl(null);
-  }, [photo?.url]);
 
   const savedYears = useMemo(() => {
     const avg = (sun + hyd + sleepVal + routine) / 4;

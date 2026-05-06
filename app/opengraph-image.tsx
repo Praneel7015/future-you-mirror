@@ -85,7 +85,7 @@ export default function OGImage() {
             lineHeight: 1.4,
           }}
         >
-          See the skin you'll have — and the one you could.
+          See the skin you&apos;ll have — and the one you could.
         </div>
 
         <div
