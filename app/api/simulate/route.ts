@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { simulateSkin, type SkinSimParams } from "@/lib/perfectcorp/skin-sim";
+import { toAbsoluteRequestUrl } from "@/lib/request-absolute-url";
 
 export const maxDuration = 60;
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const imageUrl = await simulateSkin({
-      sourceUrl: body.sourceUrl,
+      sourceUrl: toAbsoluteRequestUrl(body.sourceUrl, req.nextUrl.origin),
       radiance: body.radiance ?? 0,
       wrinkles: body.wrinkles ?? 0,
       spots: body.spots ?? 0,

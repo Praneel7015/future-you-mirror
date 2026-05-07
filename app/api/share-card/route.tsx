@@ -4,16 +4,29 @@ import {
   SHARE_CARD_H,
   SHARE_CARD_SITE_LINE,
   SHARE_CARD_W,
-  shareCardBackground,
+  shareCardBackgroundFull,
   shareCardLayout,
 } from "@/lib/share-card-spec";
+import { toAbsoluteRequestUrl } from "@/lib/request-absolute-url";
 
 export const runtime = "edge";
 
-async function inlineImage(url: string): Promise<string | null> {
+async function inlineImage(url: string, requestOrigin: string): Promise<string | null> {
   if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith("data:")) return trimmed;
+
+  const abs = toAbsoluteRequestUrl(trimmed, requestOrigin);
+  if (!abs) return null;
+
   try {
-    const r = await fetch(url, { cache: "no-store" });
+    const r = await fetch(abs, {
+      cache: "no-store",
+      headers: {
+        Accept: "image/*,*/*;q=0.8",
+        "User-Agent": "FutureYouMirror/1.0 (share-card; +https://future-you-mirror.vercel.app)",
+      },
+    });
     if (!r.ok) return null;
     const ct = r.headers.get("content-type") ?? "image/jpeg";
     const buf = await r.arrayBuffer();
@@ -49,12 +62,15 @@ export function normalizeSharePayload(input: Partial<ShareCardFields>): ShareCar
   };
 }
 
-async function renderShareCardImageResponse(fields: ShareCardFields): Promise<ImageResponse> {
+async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRequest): Promise<ImageResponse> {
   const { nowUrl, futureUrl, score, concern, nowYear, futureYear, futureLabel } = fields;
   const L = shareCardLayout;
-  const BG = shareCardBackground;
+  const origin = req.nextUrl.origin;
 
-  const [nowSrc, futureSrc] = await Promise.all([inlineImage(nowUrl), inlineImage(futureUrl)]);
+  const [nowSrc, futureSrc] = await Promise.all([
+    inlineImage(nowUrl, origin),
+    inlineImage(futureUrl, origin),
+  ]);
 
   const rRing = L.stats.ringRadius;
   const filledArc = (score / 100) * 2 * Math.PI * rRing;
@@ -68,28 +84,24 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          background: BG.base,
-          position: "relative",
+          alignItems: "stretch",
+          justifyContent: "stretch",
+          background: "transparent",
         }}
       >
         <div
           style={{
-            position: "absolute",
-            inset: 0,
-            background: BG.wash1,
+            width: "100%",
+            height: "100%",
             display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            position: "relative",
+            borderRadius: L.outerRadius,
+            overflow: "hidden",
+            background: shareCardBackgroundFull,
           }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: BG.wash2,
-            display: "flex",
-          }}
-        />
+        >
 
         <div
           style={{
@@ -410,6 +422,7 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
             share #futureyoumirror
           </div>
         </div>
+        </div>
       </div>
     ),
     {
@@ -431,6 +444,7 @@ export async function GET(req: NextRequest) {
       futureYear: sp.get("futureYear") ?? String(new Date().getFullYear() + 30),
       futureLabel: sp.get("futureLabel") ?? "AT SIXTY-FIVE",
     }),
+    req,
   );
 }
 
@@ -455,5 +469,6 @@ export async function POST(req: NextRequest) {
       futureYear: typeof o.futureYear === "string" ? o.futureYear : undefined,
       futureLabel: typeof o.futureLabel === "string" ? o.futureLabel : undefined,
     }),
+    req,
   );
 }

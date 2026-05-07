@@ -6,7 +6,7 @@ import { compositeSkinScore, topConcernWord } from "@/lib/skin-score";
 import {
   SHARE_CARD_H,
   SHARE_CARD_SITE_LINE,
-  shareCardBackground,
+  shareCardBackgroundFull,
   shareCardLayout,
   scaleSharePx,
 } from "@/lib/share-card-spec";
@@ -121,7 +121,6 @@ export default function ShareStep() {
 
   const PREVIEW_W = 270;
   const L = shareCardLayout;
-  const BG = shareCardBackground;
   const sc = (n: number) => scaleSharePx(n, PREVIEW_W);
   const ringR = sc(L.stats.ringRadius);
   const ringBox = sc(L.stats.ringSvg);
@@ -354,11 +353,9 @@ export default function ShareStep() {
               height: scaleSharePx(SHARE_CARD_H, PREVIEW_W),
               borderRadius: sc(L.outerRadius),
               boxShadow: "0 24px 48px -16px rgba(42,40,38,0.22), 0 8px 20px -8px rgba(42,40,38,0.10)",
-              background: BG.base,
+              background: shareCardBackgroundFull,
             }}
           >
-            <div className="absolute inset-0" style={{ background: BG.wash1 }} />
-            <div className="absolute inset-0" style={{ background: BG.wash2 }} />
 
             <div
               className="absolute"

@@ -12,8 +12,15 @@ export const SHARE_CARD_SITE_LINE = "future-you-mirror.vercel.app";
 export const shareCardBackground = {
   base: "linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
   wash1: "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%)",
-  wash2: "radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.30), transparent 65%)",
+  /** Slightly stronger mocha wash (matches landing hero) so OG render reads less “flat”. */
+  wash2: "radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.35), transparent 65%)",
 } as const;
+
+/**
+ * One background shorthand for preview + PNG: radials paint over the linear base.
+ * Use this instead of stacked absolute divs — Satori often only reliably paints the first full-area fill.
+ */
+export const shareCardBackgroundFull = `${shareCardBackground.wash1}, ${shareCardBackground.wash2}, ${shareCardBackground.base}`;
 
 /** Layout tokens in export pixels (1080 wide) */
 export const shareCardLayout = {
