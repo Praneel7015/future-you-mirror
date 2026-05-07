@@ -4,12 +4,15 @@ import {
   SHARE_CARD_H,
   SHARE_CARD_SITE_LINE,
   SHARE_CARD_W,
-  shareCardBackgroundFull,
+  shareCardBackground,
   shareCardLayout,
 } from "@/lib/share-card-spec";
 import { toAbsoluteRequestUrl } from "@/lib/request-absolute-url";
 
 export const runtime = "edge";
+
+/** Avoid giant data: URIs in Satori — keeps Edge render stable; OG may fetch the HTTPS URL. */
+const MAX_SHARE_CARD_INLINE_BYTES = 2_400_000;
 
 async function inlineImage(url: string, requestOrigin: string): Promise<string | null> {
   if (!url) return null;
@@ -30,10 +33,27 @@ async function inlineImage(url: string, requestOrigin: string): Promise<string |
     if (!r.ok) return null;
     const ct = r.headers.get("content-type") ?? "image/jpeg";
     const buf = await r.arrayBuffer();
+    if (buf.byteLength > MAX_SHARE_CARD_INLINE_BYTES) {
+      return abs;
+    }
     const b64 = Buffer.from(buf).toString("base64");
     return `data:${ct};base64,${b64}`;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Return ImageResponse directly. Cloning via arrayBuffer() + new Response() breaks some browsers
+ * (e.g. Firefox) with Next/ImageResponse. Clients that need a full buffer can still use arrayBuffer().
+ */
+async function pngRouteResponse(fields: ShareCardFields, req: NextRequest): Promise<Response> {
+  try {
+    return await renderShareCardImageResponse(fields, req);
+  } catch (err) {
+    console.error("[share-card] render error:", err);
+    const message = err instanceof Error ? err.message : "render_failed";
+    return Response.json({ error: "render_failed", message }, { status: 500 });
   }
 }
 
@@ -65,6 +85,7 @@ export function normalizeSharePayload(input: Partial<ShareCardFields>): ShareCar
 async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRequest): Promise<ImageResponse> {
   const { nowUrl, futureUrl, score, concern, nowYear, futureYear, futureLabel } = fields;
   const L = shareCardLayout;
+  const BG = shareCardBackground;
   const origin = req.nextUrl.origin;
 
   const [nowSrc, futureSrc] = await Promise.all([
@@ -84,8 +105,8 @@ async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRe
           width: "100%",
           height: "100%",
           display: "flex",
-          alignItems: "stretch",
-          justifyContent: "stretch",
+          flexDirection: "column",
+          position: "relative",
           background: "transparent",
         }}
       >
@@ -99,9 +120,41 @@ async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRe
             position: "relative",
             borderRadius: L.outerRadius,
             overflow: "hidden",
-            background: shareCardBackgroundFull,
           }}
         >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            background: BG.base,
+            display: "flex",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            background: BG.wash1,
+            display: "flex",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            background: BG.wash2,
+            display: "flex",
+          }}
+        />
 
         <div
           style={{
@@ -164,12 +217,11 @@ async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRe
           }}
         >
           {[
-            { src: nowSrc, year: nowYear, label: "NOW", filter: "brightness(1.04) saturate(1.05)" },
+            { src: nowSrc, year: nowYear, label: "NOW" },
             {
               src: futureSrc,
               year: futureYear,
               label: futureLabel,
-              filter: "brightness(0.94) saturate(0.85) contrast(1.02)",
             },
           ].map((o, i) => (
             <div
@@ -204,7 +256,6 @@ async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRe
                       height: L.portraits.ovalH,
                       objectFit: "cover",
                       objectPosition: L.portraits.imgObjectPosition,
-                      filter: o.filter,
                     }}
                   />
                 ) : (
@@ -434,7 +485,7 @@ async function renderShareCardImageResponse(fields: ShareCardFields, req: NextRe
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  return renderShareCardImageResponse(
+  return pngRouteResponse(
     normalizeSharePayload({
       nowUrl: sp.get("nowUrl") ?? "",
       futureUrl: sp.get("futureUrl") ?? "",
@@ -459,7 +510,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "invalid_body", message: "Expected a JSON object." }, { status: 400 });
   }
   const o = body as Record<string, unknown>;
-  return renderShareCardImageResponse(
+  return pngRouteResponse(
     normalizeSharePayload({
       nowUrl: typeof o.nowUrl === "string" ? o.nowUrl : undefined,
       futureUrl: typeof o.futureUrl === "string" ? o.futureUrl : undefined,

@@ -137,25 +137,35 @@ export default function ShareStep() {
   });
 
   async function fetchShareCardBlob(): Promise<Blob> {
-    const res = await fetch("/api/share-card", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cardPostBody()),
-      cache: "no-store",
-    });
-    const ct = res.headers.get("content-type") ?? "";
-    if (!res.ok) {
-      let detail = "";
-      try {
-        detail = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
-      } catch {
-        detail = "";
+    const body = JSON.stringify(cardPostBody());
+
+    const readOnce = async () => {
+      const res = await fetch("/api/share-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        cache: "no-store",
+      });
+      const ct = res.headers.get("content-type") ?? "";
+      if (!res.ok) {
+        let detail = "";
+        try {
+          detail = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+        } catch {
+          detail = "";
+        }
+        throw new Error(`Could not compose card (${res.status}). ${detail.slice(0, 160)}`);
       }
-      throw new Error(`Could not compose card (${res.status}). ${detail.slice(0, 160)}`);
+      const ab = await res.arrayBuffer();
+      return { ab, ct };
+    };
+
+    let { ab } = await readOnce();
+    if (ab.byteLength === 0) {
+      ({ ab } = await readOnce());
     }
-    const blob = await res.blob();
-    if (blob.size === 0) throw new Error("Server returned an empty image.");
-    return blob;
+    if (!ab || ab.byteLength === 0) throw new Error("Server returned an empty image.");
+    return new Blob([ab], { type: "image/png" });
   }
 
   const triggerDownloadFromBlob = (blob: Blob) => {
