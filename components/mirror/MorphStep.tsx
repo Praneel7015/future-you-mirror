@@ -62,7 +62,7 @@ export default function MorphStep() {
       style={{
         background:
           "radial-gradient(80% 80% at 50% 45%, #2D2925 0%, #1A1714 70%, #0E0C0A 100%)",
-        minHeight: "100vh",
+        minHeight: "100dvh",
       }}
     >
       {/* eyebrow crossfade */}

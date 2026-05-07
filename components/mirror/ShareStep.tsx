@@ -3,6 +3,13 @@
 import { useMemo, useState } from "react";
 import { useMirror, findClosestPhoto } from "@/lib/store";
 import { compositeSkinScore, topConcernWord } from "@/lib/skin-score";
+import {
+  SHARE_CARD_H,
+  SHARE_CARD_SITE_LINE,
+  shareCardBackground,
+  shareCardLayout,
+  scaleSharePx,
+} from "@/lib/share-card-spec";
 
 const SaveIcon = () => (
   <svg
@@ -104,13 +111,21 @@ export default function ShareStep() {
 
   if (!result || !cardData) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100vh" }}>
+      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
           No reading yet.
         </div>
       </div>
     );
   }
+
+  const PREVIEW_W = 270;
+  const L = shareCardLayout;
+  const BG = shareCardBackground;
+  const sc = (n: number) => scaleSharePx(n, PREVIEW_W);
+  const ringR = sc(L.stats.ringRadius);
+  const ringBox = sc(L.stats.ringSvg);
+  const ringMid = ringBox / 2;
 
   const cardPostBody = (): ShareCardPostBody => ({
     nowUrl: cardData.nowUrl,
@@ -300,7 +315,7 @@ export default function ShareStep() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100vh" }}>
+    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
       <button
         onClick={() => setStep("insights")}
         className="text-[10px] uppercase self-start mb-6"
@@ -329,51 +344,40 @@ export default function ShareStep() {
         <span style={{ color: "#A78B71", fontStyle: "italic" }}>or pass it on.</span>
       </h1>
 
-      {/* Detailed mini preview — mirrors the 1080×1920 export */}
+      {/* Preview uses the same layout spec as POST /api/share-card (1080×1920 PNG) */}
       <div className="flex-1 flex items-center justify-center my-6">
         <div className="flex flex-col items-center">
           <div
             className="relative overflow-hidden"
             style={{
-              width: 270,
-              height: 480,
-              borderRadius: 12,
+              width: PREVIEW_W,
+              height: scaleSharePx(SHARE_CARD_H, PREVIEW_W),
+              borderRadius: sc(L.outerRadius),
               boxShadow: "0 24px 48px -16px rgba(42,40,38,0.22), 0 8px 20px -8px rgba(42,40,38,0.10)",
-              background: "linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
+              background: BG.base,
             }}
           >
-            {/* gradient washes */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%), radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.30), transparent 65%)",
-              }}
-            />
-            {/* faint mocha oval watermark */}
+            <div className="absolute inset-0" style={{ background: BG.wash1 }} />
+            <div className="absolute inset-0" style={{ background: BG.wash2 }} />
+
             <div
               className="absolute"
               style={{
-                left: "50%",
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 190,
-                height: 275,
+                left: sc(L.watermark.left),
+                top: sc(L.watermark.top),
+                width: sc(L.watermark.width),
+                height: sc(L.watermark.height),
                 borderRadius: "50%",
-                border: "1px solid rgba(167,139,113,0.18)",
+                border: `${sc(L.watermark.borderWidth)} solid ${L.watermark.borderColor}`,
               }}
             />
 
-            {/* editorial header */}
-            <div
-              className="absolute left-0 right-0 text-center"
-              style={{ top: 22 }}
-            >
+            <div className="absolute left-0 right-0 text-center" style={{ top: sc(L.header.top) }}>
               <div
                 style={{
-                  fontSize: 7,
-                  letterSpacing: "0.36em",
-                  color: "#A78B71",
+                  fontSize: sc(L.header.kickerFont),
+                  letterSpacing: `${L.header.kickerLetterSpacingEm}em`,
+                  color: L.header.kickerColor,
                   fontWeight: 500,
                   textTransform: "uppercase",
                 }}
@@ -384,19 +388,18 @@ export default function ShareStep() {
                 style={{
                   fontFamily: "var(--font-serif)",
                   fontStyle: "italic",
-                  fontSize: 8,
-                  color: "rgba(42,40,38,0.55)",
-                  marginTop: 4,
+                  fontSize: sc(L.header.editionFont),
+                  color: L.header.editionColor,
+                  marginTop: sc(L.header.editionMarginTop),
                 }}
               >
                 Edition Nº 01
               </div>
             </div>
 
-            {/* twin ovals: NOW + AT FUTURE */}
             <div
               className="absolute left-0 right-0 flex justify-center"
-              style={{ top: 70, gap: 14 }}
+              style={{ top: sc(L.portraits.top), gap: sc(L.portraits.gap) }}
             >
               {[
                 {
@@ -412,14 +415,14 @@ export default function ShareStep() {
                   filter: "brightness(0.94) saturate(0.85) contrast(1.02)",
                 },
               ].map((o, i) => (
-                <div key={i} style={{ width: 95, textAlign: "center" }}>
+                <div key={i} style={{ width: sc(L.portraits.ovalW), textAlign: "center" }}>
                   <div
                     className="overflow-hidden relative"
                     style={{
-                      width: 95,
-                      height: 125,
+                      width: sc(L.portraits.ovalW),
+                      height: sc(L.portraits.ovalH),
                       borderRadius: "50% / 50%",
-                      border: "1px solid rgba(42,40,38,0.18)",
+                      border: `${sc(L.portraits.ovalBorderWidth)} solid ${L.portraits.ovalBorderColor}`,
                     }}
                   >
                     {o.src && (
@@ -431,31 +434,31 @@ export default function ShareStep() {
                           width: "100%",
                           height: "100%",
                           objectFit: "cover",
-                          objectPosition: "center 28%",
+                          objectPosition: L.portraits.imgObjectPosition,
                           filter: o.filter,
                         }}
                       />
                     )}
                   </div>
                   <div
-                    className="mt-2"
                     style={{
                       fontFamily: "var(--font-serif)",
-                      fontSize: 10,
+                      fontSize: sc(L.portraits.yearFont),
                       fontWeight: 400,
                       letterSpacing: "0.04em",
-                      color: "#2A2826",
+                      color: L.portraits.yearColor,
+                      marginTop: sc(L.portraits.yearMarginTop),
                     }}
                   >
                     {o.year}
                   </div>
                   <div
-                    className="mt-0.5"
                     style={{
-                      fontSize: 6.5,
-                      letterSpacing: "0.32em",
-                      color: "rgba(42,40,38,0.5)",
+                      fontSize: sc(L.portraits.labelFont),
+                      letterSpacing: `${0.32}em`,
+                      color: L.portraits.labelColor,
                       textTransform: "uppercase",
+                      marginTop: sc(L.portraits.labelMarginTop),
                     }}
                   >
                     {o.label}
@@ -464,18 +467,19 @@ export default function ShareStep() {
               ))}
             </div>
 
-            {/* italic mocha tagline */}
             <div
-              className="absolute left-4 right-4 text-center"
+              className="absolute text-center"
               style={{
-                top: 252,
+                top: sc(L.tagline.top),
+                left: sc(L.tagline.insetX),
+                right: sc(L.tagline.insetX),
                 fontFamily: "var(--font-serif)",
                 fontStyle: "italic",
-                fontSize: 18,
-                lineHeight: 1.15,
+                fontSize: sc(L.tagline.font),
+                lineHeight: L.tagline.lineHeight,
                 fontWeight: 400,
-                color: "#A78B71",
-                letterSpacing: "-0.01em",
+                color: L.tagline.color,
+                letterSpacing: L.tagline.letterSpacingEm,
               }}
             >
               a thirty-year letter,
@@ -483,23 +487,29 @@ export default function ShareStep() {
               written in skin.
             </div>
 
-            {/* score + concern row */}
             <div
               className="absolute left-0 right-0 flex justify-center items-center"
-              style={{ top: 330, gap: 14 }}
+              style={{ top: sc(L.stats.top), gap: sc(L.stats.gap) }}
             >
-              <div className="flex items-center" style={{ gap: 8 }}>
-                <svg width="36" height="36" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(167,139,113,0.18)" strokeWidth="1.5" />
+              <div className="flex items-center" style={{ gap: sc(L.stats.scoreGap) }}>
+                <svg width={ringBox} height={ringBox} viewBox={`0 0 ${ringBox} ${ringBox}`}>
                   <circle
-                    cx="18"
-                    cy="18"
-                    r="16"
+                    cx={ringMid}
+                    cy={ringMid}
+                    r={ringR}
                     fill="none"
-                    stroke="#A78B71"
-                    strokeWidth="1.5"
-                    strokeDasharray={`${(cardData.score / 100) * 2 * Math.PI * 16} ${2 * Math.PI * 16}`}
-                    transform="rotate(-90 18 18)"
+                    stroke={L.stats.ringStrokeBg}
+                    strokeWidth={sc(L.stats.ringStrokeWidth)}
+                  />
+                  <circle
+                    cx={ringMid}
+                    cy={ringMid}
+                    r={ringR}
+                    fill="none"
+                    stroke={L.stats.ringStrokeFg}
+                    strokeWidth={sc(L.stats.ringStrokeWidth)}
+                    strokeDasharray={`${(cardData.score / 100) * 2 * Math.PI * ringR} ${2 * Math.PI * ringR}`}
+                    transform={`rotate(-90 ${ringMid} ${ringMid})`}
                     strokeLinecap="round"
                   />
                 </svg>
@@ -507,10 +517,10 @@ export default function ShareStep() {
                   <div
                     style={{
                       fontFamily: "var(--font-serif)",
-                      fontSize: 18,
+                      fontSize: sc(L.stats.scoreNumberFont),
                       lineHeight: 1,
                       fontWeight: 300,
-                      letterSpacing: "-0.04em",
+                      letterSpacing: L.stats.scoreNumberLetterSpacingEm,
                       fontVariantNumeric: "tabular-nums",
                       color: "#2A2826",
                     }}
@@ -518,12 +528,12 @@ export default function ShareStep() {
                     {Math.round(cardData.score)}
                   </div>
                   <div
-                    className="mt-0.5"
                     style={{
-                      fontSize: 6,
+                      fontSize: sc(L.stats.scoreLabelFont),
                       color: "#A78B71",
-                      letterSpacing: "0.28em",
+                      letterSpacing: `${L.stats.scoreLabelLetterSpacingEm}em`,
                       textTransform: "uppercase",
+                      marginTop: sc(L.stats.scoreLabelMarginTop),
                     }}
                   >
                     SKIN SCORE
@@ -531,27 +541,33 @@ export default function ShareStep() {
                 </div>
               </div>
 
-              <div style={{ width: 1, height: 28, background: "rgba(42,40,38,0.18)" }} />
+              <div
+                style={{
+                  width: sc(L.stats.dividerW),
+                  height: sc(L.stats.dividerH),
+                  background: "rgba(42,40,38,0.18)",
+                }}
+              />
 
               <div>
                 <div
                   style={{
-                    fontSize: 6,
+                    fontSize: sc(L.stats.concernKickerFont),
                     color: "rgba(42,40,38,0.5)",
-                    letterSpacing: "0.28em",
+                    letterSpacing: `${L.stats.concernKickerLetterSpacingEm}em`,
                     textTransform: "uppercase",
                   }}
                 >
                   YOUR ONE THING
                 </div>
                 <div
-                  className="mt-1"
                   style={{
                     fontFamily: "var(--font-serif)",
                     fontStyle: "italic",
-                    fontSize: 18,
+                    fontSize: sc(L.stats.concernFont),
                     lineHeight: 1,
                     color: "#A78B71",
+                    marginTop: sc(L.stats.concernMarginTop),
                   }}
                 >
                   {cardData.concern}
@@ -559,37 +575,35 @@ export default function ShareStep() {
               </div>
             </div>
 
-            {/* hairline */}
             <div
               className="absolute"
               style={{
-                top: 388,
-                left: 50,
-                right: 50,
-                height: 1,
-                background: "rgba(42,40,38,0.18)",
+                top: sc(L.hairline.top),
+                left: sc(L.hairline.insetX),
+                right: sc(L.hairline.insetX),
+                height: sc(L.hairline.height),
+                background: L.hairline.color,
               }}
             />
 
-            {/* signature */}
-            <div className="absolute left-0 right-0 text-center" style={{ bottom: 24 }}>
+            <div className="absolute left-0 right-0 text-center" style={{ bottom: sc(L.footer.bottom) }}>
               <div
                 style={{
                   fontFamily: "var(--font-serif)",
                   fontStyle: "italic",
-                  fontSize: 12,
-                  color: "rgba(42,40,38,0.6)",
+                  fontSize: sc(L.footer.siteFont),
+                  color: L.footer.siteColor,
                 }}
               >
-                futureyou.mirror
+                {SHARE_CARD_SITE_LINE}
               </div>
               <div
-                className="mt-1"
                 style={{
-                  fontSize: 6.5,
-                  color: "rgba(42,40,38,0.45)",
-                  letterSpacing: "0.32em",
+                  fontSize: sc(L.footer.hashFont),
+                  color: L.footer.hashColor,
+                  letterSpacing: `${L.footer.hashLetterSpacingEm}em`,
                   textTransform: "uppercase",
+                  marginTop: sc(L.footer.hashMarginTop),
                 }}
               >
                 share #futureyoumirror

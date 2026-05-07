@@ -1,14 +1,15 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import {
+  SHARE_CARD_H,
+  SHARE_CARD_SITE_LINE,
+  SHARE_CARD_W,
+  shareCardBackground,
+  shareCardLayout,
+} from "@/lib/share-card-spec";
 
 export const runtime = "edge";
 
-const W = 1080;
-const H = 1920;
-
-// Fetch a remote image and inline it as a data URI so Satori never has to
-// reach across the network mid-render. Falls back to the original URL if
-// fetching fails — Satori can sometimes still pull it.
 async function inlineImage(url: string): Promise<string | null> {
   if (!url) return null;
   try {
@@ -50,12 +51,15 @@ export function normalizeSharePayload(input: Partial<ShareCardFields>): ShareCar
 
 async function renderShareCardImageResponse(fields: ShareCardFields): Promise<ImageResponse> {
   const { nowUrl, futureUrl, score, concern, nowYear, futureYear, futureLabel } = fields;
+  const L = shareCardLayout;
+  const BG = shareCardBackground;
 
   const [nowSrc, futureSrc] = await Promise.all([inlineImage(nowUrl), inlineImage(futureUrl)]);
 
-  const radius = 56;
-  const filledArc = (score / 100) * 2 * Math.PI * radius;
-  const totalArc = 2 * Math.PI * radius;
+  const rRing = L.stats.ringRadius;
+  const filledArc = (score / 100) * 2 * Math.PI * rRing;
+  const totalArc = 2 * Math.PI * rRing;
+  const ringMid = L.stats.ringSvg / 2;
 
   return new ImageResponse(
     (
@@ -66,17 +70,15 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          background: "linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
+          background: BG.base,
           position: "relative",
         }}
       >
-        {/* Layered hero gradients */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%)",
+            background: BG.wash1,
             display: "flex",
           }}
         />
@@ -84,31 +86,28 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.30), transparent 65%)",
+            background: BG.wash2,
             display: "flex",
           }}
         />
 
-        {/* Faint mocha oval watermark — circular for Satori reliability */}
         <div
           style={{
             position: "absolute",
-            left: 160,
-            top: 410,
-            width: 760,
-            height: 760,
+            left: L.watermark.left,
+            top: L.watermark.top,
+            width: L.watermark.width,
+            height: L.watermark.height,
             borderRadius: 9999,
-            border: "2px solid rgba(167,139,113,0.18)",
+            border: `${L.watermark.borderWidth}px solid ${L.watermark.borderColor}`,
             display: "flex",
           }}
         />
 
-        {/* Editorial header */}
         <div
           style={{
             position: "absolute",
-            top: 96,
+            top: L.header.top,
             left: 0,
             right: 0,
             display: "flex",
@@ -118,9 +117,9 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
         >
           <div
             style={{
-              fontSize: 26,
-              letterSpacing: 10,
-              color: "#A78B71",
+              fontSize: L.header.kickerFont,
+              letterSpacing: `${L.header.kickerLetterSpacingEm}em`,
+              color: L.header.kickerColor,
               fontWeight: 500,
               textTransform: "uppercase",
               display: "flex",
@@ -131,9 +130,9 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           <div
             style={{
               fontStyle: "italic",
-              fontSize: 24,
-              color: "rgba(42,40,38,0.55)",
-              marginTop: 14,
+              fontSize: L.header.editionFont,
+              color: L.header.editionColor,
+              marginTop: L.header.editionMarginTop,
               display: "flex",
             }}
           >
@@ -141,16 +140,15 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           </div>
         </div>
 
-        {/* Twin ovals: NOW + AT FUTURE */}
         <div
           style={{
             position: "absolute",
-            top: 280,
+            top: L.portraits.top,
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
-            gap: 56,
+            gap: L.portraits.gap,
           }}
         >
           {[
@@ -165,7 +163,7 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
             <div
               key={i}
               style={{
-                width: 380,
+                width: L.portraits.ovalW,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -173,10 +171,10 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
             >
               <div
                 style={{
-                  width: 380,
-                  height: 500,
+                  width: L.portraits.ovalW,
+                  height: L.portraits.ovalH,
                   borderRadius: 9999,
-                  border: "2px solid rgba(42,40,38,0.18)",
+                  border: `${L.portraits.ovalBorderWidth}px solid ${L.portraits.ovalBorderColor}`,
                   overflow: "hidden",
                   position: "relative",
                   display: "flex",
@@ -187,20 +185,21 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
                   // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
                   <img
                     src={o.src}
-                    width={380}
-                    height={500}
+                    width={L.portraits.ovalW}
+                    height={L.portraits.ovalH}
                     style={{
-                      width: 380,
-                      height: 500,
+                      width: L.portraits.ovalW,
+                      height: L.portraits.ovalH,
                       objectFit: "cover",
+                      objectPosition: L.portraits.imgObjectPosition,
                       filter: o.filter,
                     }}
                   />
                 ) : (
                   <div
                     style={{
-                      width: 380,
-                      height: 500,
+                      width: L.portraits.ovalW,
+                      height: L.portraits.ovalH,
                       background:
                         "linear-gradient(180deg, rgba(232,197,181,0.4) 0%, rgba(167,139,113,0.25) 100%)",
                       display: "flex",
@@ -210,11 +209,11 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
               </div>
               <div
                 style={{
-                  fontSize: 30,
-                  marginTop: 26,
+                  fontSize: L.portraits.yearFont,
+                  marginTop: L.portraits.yearMarginTop,
                   fontWeight: 400,
-                  letterSpacing: 1.4,
-                  color: "#2A2826",
+                  letterSpacing: "0.04em",
+                  color: L.portraits.yearColor,
                   display: "flex",
                 }}
               >
@@ -222,10 +221,10 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
               </div>
               <div
                 style={{
-                  fontSize: 16,
-                  marginTop: 6,
-                  letterSpacing: 5,
-                  color: "rgba(42,40,38,0.5)",
+                  fontSize: L.portraits.labelFont,
+                  marginTop: L.portraits.labelMarginTop,
+                  letterSpacing: "0.32em",
+                  color: L.portraits.labelColor,
                   textTransform: "uppercase",
                   display: "flex",
                 }}
@@ -236,13 +235,12 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           ))}
         </div>
 
-        {/* Italic mocha tagline */}
         <div
           style={{
             position: "absolute",
-            top: 1010,
-            left: 80,
-            right: 80,
+            top: L.tagline.top,
+            left: L.tagline.insetX,
+            right: L.tagline.insetX,
             display: "flex",
             justifyContent: "center",
           }}
@@ -250,11 +248,11 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           <div
             style={{
               fontStyle: "italic",
-              fontSize: 68,
-              lineHeight: 1.15,
+              fontSize: L.tagline.font,
+              lineHeight: L.tagline.lineHeight,
               fontWeight: 400,
-              color: "#A78B71",
-              letterSpacing: -0.6,
+              color: L.tagline.color,
+              letterSpacing: L.tagline.letterSpacingEm,
               textAlign: "center",
               display: "flex",
               flexDirection: "column",
@@ -266,49 +264,49 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           </div>
         </div>
 
-        {/* Score ring + concern */}
         <div
           style={{
             position: "absolute",
-            top: 1300,
+            top: L.stats.top,
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: 52,
+            gap: L.stats.gap,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <svg width="120" height="120" viewBox="0 0 120 120">
+          <div style={{ display: "flex", alignItems: "center", gap: L.stats.scoreGap }}>
+            <svg width={L.stats.ringSvg} height={L.stats.ringSvg} viewBox={`0 0 ${L.stats.ringSvg} ${L.stats.ringSvg}`}>
               <circle
-                cx="60"
-                cy="60"
-                r={radius}
+                cx={ringMid}
+                cy={ringMid}
+                r={rRing}
                 fill="none"
-                stroke="rgba(167,139,113,0.18)"
-                strokeWidth="3"
+                stroke={L.stats.ringStrokeBg}
+                strokeWidth={L.stats.ringStrokeWidth}
               />
               <circle
-                cx="60"
-                cy="60"
-                r={radius}
+                cx={ringMid}
+                cy={ringMid}
+                r={rRing}
                 fill="none"
-                stroke="#A78B71"
-                strokeWidth="3"
+                stroke={L.stats.ringStrokeFg}
+                strokeWidth={L.stats.ringStrokeWidth}
                 strokeDasharray={`${filledArc} ${totalArc}`}
-                transform="rotate(-90 60 60)"
+                transform={`rotate(-90 ${ringMid} ${ringMid})`}
                 strokeLinecap="round"
               />
             </svg>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div
                 style={{
-                  fontSize: 60,
+                  fontSize: L.stats.scoreNumberFont,
                   lineHeight: 1,
                   fontWeight: 300,
-                  letterSpacing: -2,
+                  letterSpacing: L.stats.scoreNumberLetterSpacingEm,
                   color: "#2A2826",
+                  fontVariantNumeric: "tabular-nums",
                   display: "flex",
                 }}
               >
@@ -316,10 +314,10 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
               </div>
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: L.stats.scoreLabelFont,
                   color: "#A78B71",
-                  marginTop: 8,
-                  letterSpacing: 4,
+                  marginTop: L.stats.scoreLabelMarginTop,
+                  letterSpacing: `${L.stats.scoreLabelLetterSpacingEm}em`,
                   textTransform: "uppercase",
                   display: "flex",
                 }}
@@ -329,14 +327,21 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
             </div>
           </div>
 
-          <div style={{ width: 1, height: 100, background: "rgba(42,40,38,0.18)", display: "flex" }} />
+          <div
+            style={{
+              width: L.stats.dividerW,
+              height: L.stats.dividerH,
+              background: "rgba(42,40,38,0.18)",
+              display: "flex",
+            }}
+          />
 
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div
               style={{
-                fontSize: 14,
+                fontSize: L.stats.concernKickerFont,
                 color: "rgba(42,40,38,0.5)",
-                letterSpacing: 4,
+                letterSpacing: `${L.stats.concernKickerLetterSpacingEm}em`,
                 textTransform: "uppercase",
                 display: "flex",
               }}
@@ -346,11 +351,11 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
             <div
               style={{
                 fontStyle: "italic",
-                fontSize: 60,
+                fontSize: L.stats.concernFont,
                 lineHeight: 1,
                 fontWeight: 400,
                 color: "#A78B71",
-                marginTop: 14,
+                marginTop: L.stats.concernMarginTop,
                 display: "flex",
               }}
             >
@@ -359,24 +364,22 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           </div>
         </div>
 
-        {/* Hairline */}
         <div
           style={{
             position: "absolute",
-            top: 1520,
-            left: 200,
-            right: 200,
-            height: 1,
-            background: "rgba(42,40,38,0.18)",
+            top: L.hairline.top,
+            left: L.hairline.insetX,
+            right: L.hairline.insetX,
+            height: L.hairline.height,
+            background: L.hairline.color,
             display: "flex",
           }}
         />
 
-        {/* Signature */}
         <div
           style={{
             position: "absolute",
-            bottom: 84,
+            bottom: L.footer.bottom,
             left: 0,
             right: 0,
             display: "flex",
@@ -387,19 +390,19 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
           <div
             style={{
               fontStyle: "italic",
-              fontSize: 24,
-              color: "rgba(42,40,38,0.6)",
+              fontSize: L.footer.siteFont,
+              color: L.footer.siteColor,
               display: "flex",
             }}
           >
-            futureyou.mirror
+            {SHARE_CARD_SITE_LINE}
           </div>
           <div
             style={{
-              fontSize: 14,
-              color: "rgba(42,40,38,0.45)",
-              marginTop: 12,
-              letterSpacing: 5,
+              fontSize: L.footer.hashFont,
+              color: L.footer.hashColor,
+              marginTop: L.footer.hashMarginTop,
+              letterSpacing: `${L.footer.hashLetterSpacingEm}em`,
               textTransform: "uppercase",
               display: "flex",
             }}
@@ -410,8 +413,8 @@ async function renderShareCardImageResponse(fields: ShareCardFields): Promise<Im
       </div>
     ),
     {
-      width: W,
-      height: H,
+      width: SHARE_CARD_W,
+      height: SHARE_CARD_H,
     },
   );
 }

@@ -15,7 +15,7 @@ export default function ConsentStep() {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full">
+    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full min-h-dvh">
       <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
         A moment
       </div>
