@@ -21,7 +21,7 @@ export default function LoadingStep() {
       className="flex-1 flex flex-col w-full relative"
       style={{
         background: "radial-gradient(80% 60% at 50% 30%, #5C4E44 0%, #3A322C 50%, #2A2420 100%)",
-        minHeight: "100vh",
+        minHeight: "100dvh",
       }}
     >
       <div className="flex-1 flex flex-col items-center justify-center px-6">

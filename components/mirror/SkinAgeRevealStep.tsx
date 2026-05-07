@@ -28,7 +28,7 @@ export default function SkinAgeRevealStep() {
 
   if (!result) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100vh" }}>
+      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
           No reading yet.
         </div>
@@ -52,7 +52,7 @@ export default function SkinAgeRevealStep() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100vh" }}>
+    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
       <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
         Your reading
       </div>

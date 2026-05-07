@@ -73,7 +73,10 @@ function MirrorFlow() {
   }, [isDemo, setStep, setResult, setError]);
 
   return (
-    <main className="min-h-screen w-full flex flex-col">
+    <main
+      className="min-h-dvh w-full flex flex-col"
+      style={{ overscrollBehaviorY: "contain" }}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
@@ -81,7 +84,7 @@ function MirrorFlow() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="min-h-screen w-full flex flex-col"
+          className="min-h-dvh w-full flex flex-col"
         >
           {step === "consent" && <ConsentStep />}
           {step === "capture" && <CaptureStep />}
@@ -101,7 +104,7 @@ export default function MirrorPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen w-full flex items-center justify-center" style={{ background: "#F8F5F0" }}>
+        <main className="min-h-dvh w-full flex items-center justify-center" style={{ background: "#F8F5F0" }}>
           <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
             Preparing your mirror…
           </div>

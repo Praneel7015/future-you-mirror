@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
@@ -29,13 +30,25 @@ function tapOutlineSecondary() {
 
 export default function LandingPage() {
   const reduced = useReducedMotion();
+  const [narrowMobile, setNarrowMobile] = useState(false);
 
-  const fadeUp = reduced
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setNarrowMobile(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  /** Fewer simultaneous animations on small screens (helps low‑power mobile GPUs). */
+  const calm = reduced || narrowMobile;
+
+  const fadeUp = calm
     ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
     : { hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } };
 
-  const dur = reduced ? 0 : 0.65;
-  const easeUp = reduced ? undefined : ({ duration: dur, ease: EASE_MIRROR } as const);
+  const dur = calm ? 0 : 0.65;
+  const easeUp = calm ? undefined : ({ duration: dur, ease: EASE_MIRROR } as const);
 
   return (
     <main
@@ -75,15 +88,16 @@ export default function LandingPage() {
               background:
                 "radial-gradient(60% 50% at 50% 40%, rgba(255,253,249,0.55), rgba(255,253,249,0.0) 70%)",
               border: "1px solid rgba(255,253,249,0.4)",
+              willChange: calm ? undefined : "opacity, transform",
             }}
             initial={
-              reduced
+              calm
                 ? { opacity: 1, scale: 1, x: "-50%", y: "-50%" }
                 : { opacity: 0, scale: 0.96, x: "-50%", y: "-50%" }
             }
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             transition={
-              reduced
+              calm
                 ? undefined
                 : { duration: 0.75, ease: EASE_MIRROR, delay: 0.12 }
             }
@@ -98,24 +112,25 @@ export default function LandingPage() {
               height: 145,
               borderRadius: "50%",
               border: "1px solid rgba(42,40,38,0.18)",
+              willChange: calm ? undefined : "opacity, transform",
             }}
             initial={
-              reduced
+              calm
                 ? { opacity: 1, scale: 1, x: "-50%", y: "-50%" }
                 : { opacity: 0, scale: 0.94, x: "-50%", y: "-50%" }
             }
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             transition={
-              reduced ? undefined : { duration: 0.7, ease: EASE_MIRROR, delay: 0.22 }
+              calm ? undefined : { duration: 0.7, ease: EASE_MIRROR, delay: 0.22 }
             }
           />
           <motion.div
             className="absolute bottom-4 left-5 text-[10px] tracking-widest"
             style={{ color: "rgba(42,40,38,0.5)", fontFamily: "var(--font-inter)" }}
-            initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+            initial={calm ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={
-              reduced ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.42 }
+              calm ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.42 }
             }
           >
             EDITION · Nº 01
@@ -123,10 +138,10 @@ export default function LandingPage() {
           <motion.div
             className="absolute bottom-4 right-5 text-[10px] tracking-widest"
             style={{ color: "rgba(42,40,38,0.5)", fontFamily: "var(--font-inter)" }}
-            initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+            initial={calm ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={
-              reduced ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.48 }
+              calm ? undefined : { duration: 0.5, ease: EASE_MIRROR, delay: 0.48 }
             }
           >
             SPRING — 2026
@@ -143,8 +158,8 @@ export default function LandingPage() {
           hidden: {},
           visible: {
             transition: {
-              staggerChildren: reduced ? 0 : 0.11,
-              delayChildren: reduced ? 0 : 0.2,
+              staggerChildren: calm ? 0 : 0.08,
+              delayChildren: calm ? 0 : 0.12,
             },
           },
         }}
@@ -185,7 +200,7 @@ export default function LandingPage() {
               letterSpacing: "0.02em",
               fontFamily: "var(--font-sans)",
             }}
-            whileTap={reduced ? undefined : tapOutlinePrimary()}
+            whileTap={calm ? undefined : tapOutlinePrimary()}
             transition={{ type: "tween", duration: TAP_MS, ease: EASE_MIRROR }}
           >
             Begin the Mirror Test
@@ -202,7 +217,7 @@ export default function LandingPage() {
               letterSpacing: "0.02em",
               fontFamily: "var(--font-sans)",
             }}
-            whileTap={reduced ? undefined : tapOutlineSecondary()}
+            whileTap={calm ? undefined : tapOutlineSecondary()}
             transition={{ type: "tween", duration: TAP_MS, ease: EASE_MIRROR }}
           >
             Try with sample photo

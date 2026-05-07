@@ -122,7 +122,7 @@ export default function SplitMirrorStep() {
 
   if (!result) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100vh" }}>
+      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
         <div className="font-serif text-lg" style={{ color: "rgba(248,245,240,0.6)" }}>
           No reading yet.
         </div>
@@ -143,7 +143,7 @@ export default function SplitMirrorStep() {
   return (
     <div
       className="flex-1 flex flex-col w-full"
-      style={{ background: "#1a1612", minHeight: "100vh" }}
+      style={{ background: "#1a1612", minHeight: "100dvh" }}
     >
       {/* Age scrubber */}
       <div className="px-6 pt-12 w-full">
