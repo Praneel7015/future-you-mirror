@@ -1,75 +1,56 @@
 "use client";
 
-import { useMirror } from "@/lib/store";
+import { useState } from "react";
+import { findClosestPhoto, useMirror } from "@/lib/store";
 import type { SdConcern } from "@/lib/perfectcorp/types";
 import { applyLifestyleDeltas } from "@/lib/lifestyle-deltas";
 import { compositeSkinScore } from "@/lib/skin-score";
-import SkinScoreRing, { ScoreBandsList, bandFor } from "./SkinScoreRing";
-import ClimateCard from "./ClimateCard";
+import {
+  CONCERN_NAME,
+  RECOMMENDATIONS,
+  foodNoteFor,
+  type Citation,
+} from "@/lib/recommendations";
+import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
+import SkinScoreRing from "./SkinScoreRing";
 
-type InsightTemplate = {
-  finding: (score: number) => string;
-  action: string;
-};
+function CitationList({ citations }: { citations: Citation[] }) {
+  return (
+    <ul className="mt-2 space-y-1">
+      {citations.map((cite) => (
+        <li key={cite.href + cite.label}>
+          <a
+            href={cite.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-[13px]"
+            style={{
+              color: "#A78B71",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+              padding: "8px 0",
+            }}
+          >
+            {cite.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
-const INSIGHTS: Record<SdConcern, InsightTemplate> = {
-  moisture: {
-    finding: (s) => `Your skin's moisture reads at ${s} — below your generation's median.`,
-    action: "Layer a hyaluronic-acid serum under moisturizer at night.",
-  },
-  wrinkle: {
-    finding: (s) => `Fine line patterns are showing at ${s} — quietly emerging.`,
-    action: "Introduce a low-percentage retinol twice a week, after week three.",
-  },
-  firmness: {
-    finding: (s) => `Firmness reads at ${s} — your collagen scaffolding is asking for support.`,
-    action: "A peptide serum each morning, paired with daily SPF 30 to protect what you have.",
-  },
-  radiance: {
-    finding: (s) => `Radiance is sitting at ${s} — a sign of slowed cellular turnover.`,
-    action: "A weekly gentle exfoliation; vitamin C serum each morning.",
-  },
-  texture: {
-    finding: (s) => `Your texture reading at ${s} suggests a quiet, slow-build approach.`,
-    action: "Introduce a low-percentage retinol twice a week, after week three.",
-  },
-  pore: {
-    finding: (s) => `Pore visibility is shaping the trajectory — reading at ${s}.`,
-    action: "A weekly clay mask; salicylic acid as an overnight treatment.",
-  },
-  oiliness: {
-    finding: (s) => `Oil balance reads at ${s} — surface lipids are running rich.`,
-    action: "Switch to a gel-based moisturizer; niacinamide serum to balance sebum.",
-  },
-  redness: {
-    finding: (s) => `Redness is reading at ${s} — your barrier may be working overtime.`,
-    action: "A centella-asiatica or oat-based balm; pause acids for two weeks.",
-  },
-  acne: {
-    finding: (s) => `Active breakouts are present — reading at ${s}.`,
-    action: "A gentle cleanser plus a targeted salicylic acid spot treatment, twice daily.",
-  },
-  age_spot: {
-    finding: (s) => `Sun-driven pigmentation is reading at ${s} — the trajectory's biggest lever.`,
-    action: "A daily mineral SPF 30 in the morning, even on overcast days.",
-  },
-  dark_circle_v2: {
-    finding: (s) => `Under-eye darkness reads at ${s} — circulation, sleep, or pigment.`,
-    action: "A caffeine eye serum each morning; eight hours of sleep, gently.",
-  },
-  eye_bag: {
-    finding: (s) => `Under-eye puffiness reads at ${s} — fluid, fatigue, or thin skin.`,
-    action: "Cool compress in the morning; a peptide eye cream at night.",
-  },
-  droopy_upper_eyelid: {
-    finding: (s) => `Upper-lid laxity reads at ${s} — quiet structural change.`,
-    action: "A peptide eye cream morning and night; SPF around the orbital bone.",
-  },
-  droopy_lower_eyelid: {
-    finding: (s) => `Lower-lid laxity reads at ${s} — gentle support over time.`,
-    action: "A retinaldehyde eye cream at night; sleep on your back to reduce pressure.",
-  },
-};
+function uniqueCitations(groups: Citation[][]): Citation[] {
+  const seen = new Set<string>();
+  const out: Citation[] = [];
+  for (const group of groups) {
+    for (const cite of group) {
+      if (seen.has(cite.href)) continue;
+      seen.add(cite.href);
+      out.push(cite);
+    }
+  }
+  return out;
+}
 
 export default function InsightsStep() {
   const result = useMirror((s) => s.result);
@@ -78,6 +59,7 @@ export default function InsightsStep() {
   const hyd = useMirror((s) => s.hyd);
   const sleep = useMirror((s) => s.sleep);
   const routine = useMirror((s) => s.routine);
+  const [picked, setPicked] = useState<SdConcern | null>(null);
 
   if (!result) {
     return (
@@ -91,20 +73,20 @@ export default function InsightsStep() {
 
   const sliders = { sun, hyd, sleep, routine };
   const score = compositeSkinScore(result.skin.concerns, sliders);
-  const band = bandFor(score);
-
-  // Rank by lifestyle-adjusted scores so insights reflect the user's actual habits
   const adjusted = applyLifestyleDeltas(result.skin.concerns, sliders);
-  const lowest = (Object.keys(result.skin.concerns) as SdConcern[])
-    .map((k) => ({ key: k, ui: Math.round(adjusted[k] ?? result.skin.concerns[k].ui) }))
-    .sort((a, b) => a.ui - b.ui)
-    .slice(0, 3);
-
-  const cards = lowest.map((c, i) => ({
-    n: i + 1,
-    finding: INSIGHTS[c.key].finding(c.ui),
-    action: INSIGHTS[c.key].action,
-  }));
+  const ranked = (Object.keys(result.skin.concerns) as SdConcern[])
+    .map((key) => ({ key, ui: Math.round(adjusted[key] ?? result.skin.concerns[key].ui) }))
+    .sort((a, b) => a.ui - b.ui);
+  const chips = ranked.slice(0, 3);
+  const topKey = chips[0]?.key;
+  const selected =
+    picked && chips.some((chip) => chip.key === picked) ? picked : topKey;
+  const selectedScore = chips.find((chip) => chip.key === selected);
+  const rec = selected ? RECOMMENDATIONS[selected] : null;
+  const food = selected ? foodNoteFor(selected) : null;
+  const maskUrl = selected ? result.skin.concerns[selected].maskUrls?.[0] : undefined;
+  const agingFace = findClosestPhoto(result.aging.photos, result.aging.currentAge ?? 30)?.url;
+  const faceSrc = maskUrl && result.skin.resizedImageUrl ? result.skin.resizedImageUrl : agingFace;
 
   return (
     <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
@@ -115,120 +97,152 @@ export default function InsightsStep() {
         Your reading
       </div>
 
-      {/* Score ring — hero */}
-      <div className="mt-8 flex justify-center">
-        <SkinScoreRing score={score} betterThan={Math.round(score)} size={200} />
-      </div>
-
-      {/* Bands */}
-      <div className="mt-10">
-        <div className="flex items-center">
-          <div className="flex-1" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
-          <div
-            className="mx-3"
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontStyle: "italic",
-              fontSize: 13,
-              color: "#2A2826",
-              whiteSpace: "nowrap",
-            }}
-          >
-            the bands
-          </div>
-          <div className="flex-1" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
-        </div>
-        <div className="mt-4">
-          <ScoreBandsList activeName={band.name} />
-        </div>
-      </div>
-
-      {/* Climate insight */}
-      <div className="mt-10">
-        <ClimateCard />
-      </div>
-
-      {/* Three cards */}
       <h1
-        className="mt-10"
+        className="mt-8"
         style={{
           fontFamily: "var(--font-serif)",
-          fontSize: 26,
+          fontSize: 28,
           lineHeight: 1.1,
           fontWeight: 400,
         }}
       >
-        Three things,{" "}
-        <span style={{ color: "#A78B71", fontStyle: "italic" }}>quietly considered.</span>
+        Tap a concern.
       </h1>
+      <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "rgba(42,40,38,0.7)" }}>
+        The soft light marks the one to look at first.
+      </p>
 
-      <div className="mt-6 space-y-3">
-        {cards.map((c) => (
+      <div
+        className="relative mt-5 overflow-hidden"
+        style={{
+          height: 440,
+          borderRadius: 24,
+          background: "#E7DDD2",
+        }}
+      >
+        {faceSrc && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={faceSrc}
+            alt="Your photo"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center 18%" }}
+          />
+        )}
+        {maskUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={maskUrl}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center 18%", opacity: 0.55, mixBlendMode: "soft-light" }}
+          />
+        ) : (
           <div
-            key={c.n}
-            className="bg-white rounded-2xl"
+            className="pointer-events-none absolute inset-0"
             style={{
-              padding: "14px 16px",
-              border: "1px solid rgba(42,40,38,0.06)",
-              boxShadow: "0 1px 2px rgba(42,40,38,0.03)",
+              background:
+                "radial-gradient(58% 42% at 50% 36%, rgba(245,212,184,0.72), transparent 72%)",
+              mixBlendMode: "soft-light",
             }}
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className="flex-shrink-0"
+          />
+        )}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, rgba(26,22,18,0) 46%, rgba(26,22,18,0.55) 100%)",
+          }}
+        />
+        <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2">
+          {chips.map((chip) => {
+            const on = chip.key === selected;
+            const isTop = chip.key === topKey;
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setPicked(chip.key)}
+                className="w-full rounded-full text-left"
                 style={{
+                  minHeight: 48,
+                  padding: "10px 16px",
                   fontFamily: "var(--font-serif)",
-                  fontSize: 30,
-                  lineHeight: 1,
-                  fontWeight: 300,
-                  color: "#A78B71",
-                  width: 22,
+                  fontSize: 17,
+                  background: on ? "#FBF8F3" : "rgba(251,248,243,0.88)",
+                  color: "#2A2826",
+                  boxShadow: isTop ? "0 0 0 2px #F5D4B8" : "none",
                 }}
               >
-                {c.n}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontSize: 14,
-                    lineHeight: 1.4,
-                    fontWeight: 400,
-                    textWrap: "pretty" as const,
-                  }}
-                >
-                  {c.finding}
-                </div>
-                <div className="my-2" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
-                <div className="text-[12px] leading-[1.5]" style={{ color: "rgba(42,40,38,0.7)" }}>
-                  {c.action}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+                {CONCERN_NAME[chip.key]}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="mt-10">
+      {rec && food && selectedScore && (
+        <article
+          className="mt-5 bg-white rounded-2xl"
+          style={{
+            padding: "16px",
+            border: "1px solid rgba(42,40,38,0.06)",
+            boxShadow: "0 1px 2px rgba(42,40,38,0.03)",
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 26,
+              fontWeight: 400,
+              lineHeight: 1.15,
+            }}
+          >
+            {CONCERN_NAME[rec.concern]}
+          </h2>
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(42,40,38,0.78)" }}>
+            {rec.action}
+          </p>
+          <p className="mt-4 text-[14px] leading-relaxed" style={{ color: "#2A2826" }}>
+            Product: {rec.productType}
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed" style={{ color: "rgba(42,40,38,0.78)" }}>
+            {food.body}
+          </p>
+          <CitationList citations={uniqueCitations([rec.citations, food.citations])} />
+        </article>
+      )}
+
+      <div className="mt-8 flex justify-center">
+        <SkinScoreRing score={score} betterThan={Math.round(score)} size={148} />
+      </div>
+
+      <div className="mt-8">
+        <NotMedicalAdvice />
+      </div>
+
+      <div className="mt-6">
         <button
           onClick={() => setStep("share")}
-          className="w-full rounded-full"
+          className="w-full rounded-full font-medium"
           style={{
-            height: 52,
-            fontSize: 14,
+            height: 56,
+            fontSize: 15,
             letterSpacing: "0.02em",
-            background: "transparent",
-            color: "#2A2826",
-            border: "1px solid rgba(42,40,38,0.15)",
+            background: "#A78B71",
+            color: "#FBF8F3",
           }}
         >
           Save your reading
         </button>
         <div
-          className="text-center mt-3 text-[10px] uppercase"
-          style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
+          className="text-center mt-3 text-[12px]"
+          style={{ color: "#6B5D52", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
         >
-          READINGS ARE YOURS · NEVER SHARED
+          We don&apos;t post this. You choose.
+        </div>
+        <div className="mt-2">
+          <LegalLinks />
         </div>
       </div>
     </div>

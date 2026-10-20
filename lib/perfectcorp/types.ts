@@ -43,18 +43,29 @@ export interface FileUploadResponse {
 
 export interface TaskCreateResponse {
   status: number;
-  data: { task_id: string };
+  data?: { task_id?: string };
+  /** Present on 400. Includes CreditInsufficiency when units are gone. */
+  error?: string;
+  error_code?: string;
 }
 
 export type TaskStatus = "success" | "running" | "error";
 
 export interface TaskPollResponse<TResults = unknown> {
   status: number;
-  data: {
-    task_status: TaskStatus;
+  error?: string;
+  error_code?: string;
+  data?: {
+    task_status?: TaskStatus;
+    /**
+     * Skin simulation success is `{ url }` (valid about 2 hours).
+     * Schema: TaskStatusResponseBodySingleUrlResultsV2.
+     */
     results?: TResults;
+    /** Engine error code on skin simulation (`error_no_face`, and similar). */
     error?: string;
     error_code?: string;
+    error_message?: string;
     polling_interval?: number;
   };
 }
@@ -112,10 +123,22 @@ export interface SkinAnalysisOutput {
   output: SkinOutputItem[];
 }
 
+export interface ConcernScore {
+  raw: number;
+  ui: number;
+  /**
+   * HTTPS mask image URLs from Skin Analysis `mask_urls`.
+   * Absent when the task JSON does not include them.
+   */
+  maskUrls?: string[];
+}
+
 export interface SkinResult {
-  concerns: Record<SdConcern, { raw: number; ui: number }>;
+  concerns: Record<SdConcern, ConcernScore>;
   overallScore: number | null;
   skinAge: number | null;
+  /** HTTPS URL from a `resize_image` output item, when the task includes one. */
+  resizedImageUrl?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────

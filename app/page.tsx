@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { LegalLinks } from "@/components/LegalNote";
 
 const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
 const TAP_MS = 0.12;
@@ -230,10 +231,23 @@ export default function LandingPage() {
           variants={fadeUp}
           transition={easeUp}
         >
-          YOUR PHOTO NEVER LEAVES YOUR DEVICE UNENCRYPTED
+          A LIVE PHOTO GOES TO PERFECT CORP. THE SAMPLE DOES NOT.
         </motion.p>
 
-        <motion.div className="mt-5 text-center" variants={fadeUp} transition={easeUp}>
+        <motion.p
+          className="mt-3 text-center text-[13px]"
+          style={{ color: "#6B5D52", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
+          variants={fadeUp}
+          transition={easeUp}
+        >
+          Not medical advice. Not a dermatologist.
+        </motion.p>
+
+        <motion.div className="mt-4" variants={fadeUp} transition={easeUp}>
+          <LegalLinks />
+        </motion.div>
+
+        <motion.div className="mt-2 text-center" variants={fadeUp} transition={easeUp}>
           <a
             href="https://www.praneel.tech"
             target="_blank"

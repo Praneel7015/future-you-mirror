@@ -58,6 +58,30 @@ async function pcFetch(url: string, init: PcFetchInit = {}, retried = false): Pr
   return res;
 }
 
+/** Skin-simulation poll puts the engine code in `error` and prose in `error_message`. */
+function taskErrorCode(errorCode?: string, error?: string): string {
+  if (errorCode) return errorCode;
+  if (!error) return "task_error";
+  if (
+    error === "CreditInsufficiency" ||
+    error === "InvalidParameters" ||
+    error === "BadRequest" ||
+    error === "InvalidStyle" ||
+    error === "InvalidStyleGroup"
+  ) {
+    return error;
+  }
+  if (/^[a-z0-9_]+$/i.test(error) && error.includes("_")) return error;
+  return "task_error";
+}
+
+function taskErrorDetail(error: string | undefined, errorMessage: string | undefined, code: string): string {
+  const prose = errorMessage?.trim();
+  if (prose) return prose;
+  if (error && error !== code) return error;
+  return code;
+}
+
 async function readJson<T>(res: Response, context: string): Promise<T> {
   const text = await res.text();
   let parsed: unknown;
@@ -142,9 +166,11 @@ export async function createTask<TBody>(api: string, body: TBody): Promise<strin
 
   const data = await readJson<TaskCreateResponse>(res, `task create (${api})`);
   if (!res.ok || data.status !== 200 || !data.data?.task_id) {
+    const code = data.error_code || "task_create_failed";
+    const detail = data.error ? `: ${data.error}` : "";
     throw new PerfectCorpError(
-      "task_create_failed",
-      `Task create failed for ${api} (HTTP ${res.status}, status=${data.status}).`,
+      code,
+      `Task create failed for ${api} (HTTP ${res.status}, status=${data.status}${detail}).`,
       res.status,
       data,
     );
@@ -166,10 +192,12 @@ export async function pollTask<TResults>(api: string, taskId: string): Promise<T
     );
     const data = await readJson<TaskPollResponse<TResults>>(res, `task poll (${api})`);
 
-    if (!res.ok || data.status !== 200) {
+    if (!res.ok || data.status !== 200 || !data.data) {
+      const code = data.error_code || "task_poll_failed";
+      const detail = data.error ? `: ${data.error}` : "";
       throw new PerfectCorpError(
-        "task_poll_failed",
-        `Poll failed for ${api}/${taskId} (HTTP ${res.status}, status=${data.status}).`,
+        code,
+        `Poll failed for ${api}/${taskId} (HTTP ${res.status}, status=${data.status}${detail}).`,
         res.status,
         data,
       );
@@ -180,9 +208,10 @@ export async function pollTask<TResults>(api: string, taskId: string): Promise<T
       return data.data.results;
     }
     if (status === "error") {
+      const code = taskErrorCode(data.data.error_code, data.data.error);
       throw new PerfectCorpError(
-        data.data.error_code ?? "task_error",
-        `Task ${taskId} failed: ${data.data.error ?? data.data.error_code ?? "unknown"}`,
+        code,
+        `Task ${taskId} failed: ${taskErrorDetail(data.data.error, data.data.error_message, code)}`,
         res.status,
         data,
       );

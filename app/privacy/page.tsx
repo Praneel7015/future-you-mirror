@@ -2,28 +2,32 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
+import { PHOTO_DEMO, PHOTO_LIVE } from "@/lib/copy";
+import { useMirror } from "@/lib/store";
 
 const LEDGER = [
   {
     title: "Your photo",
-    body: "Encrypted in transit. Held for 24 hours so we can finish your reading. Then erased.",
-    tag: "24 HOURS",
+    body: `${PHOTO_LIVE} ${PHOTO_DEMO} A live with-care photo is also sent to Perfect Corp. We cannot delete their copy from here.`,
+    tag: "SENT ONLY IF LIVE",
   },
   {
-    title: "Your reading",
-    body: "Stored as numbers - never the photo - for 30 days, only on your device.",
-    tag: "30 DAYS",
+    title: "This reading",
+    body: "Scores and pictures for this visit stay in this browser tab. We do not save them on a server, and we do not keep them for 30 days.",
+    tag: "THIS VISIT",
   },
   {
     title: "Your email",
-    body: "Only if you ask us to remind you. Never sold. Never shared.",
-    tag: "OPT-IN ONLY",
+    body: "We do not ask for your email. There is no account to sell or share.",
+    tag: "NOT COLLECTED",
   },
 ];
 
-type Phase = "rest" | "erasing" | "gone";
+type Phase = "rest" | "clearing" | "cleared";
 
 export default function PrivacyPage() {
+  const reset = useMirror((s) => s.reset);
   const [phase, setPhase] = useState<Phase>("rest");
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -52,11 +56,17 @@ export default function PrivacyPage() {
     [reduceMotion]
   );
 
-  const startErase = () => {
+  const startClear = () => {
     if (phase !== "rest") return;
-    setPhase("erasing");
+    reset();
+    try {
+      sessionStorage.clear();
+    } catch {
+      // Private mode can block storage. The in-memory reading is still cleared.
+    }
+    setPhase("clearing");
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-    window.setTimeout(() => setPhase("gone"), motion.hold);
+    window.setTimeout(() => setPhase("cleared"), motion.hold);
   };
 
   return (
@@ -76,8 +86,13 @@ export default function PrivacyPage() {
         <div className="max-w-md mx-auto px-6 pt-16 pb-24">
           <Link
             href="/"
-            className="text-[10px] uppercase inline-block mb-8"
-            style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
+            className="text-[14px] inline-block mb-8"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontStyle: "italic",
+              color: "#A78B71",
+              padding: "12px 0",
+            }}
           >
             ← back
           </Link>
@@ -101,7 +116,7 @@ export default function PrivacyPage() {
           >
             What we keep,
             <br />
-            <span style={{ color: "#A78B71", fontStyle: "italic" }}>and for how long.</span>
+            <span style={{ color: "#A78B71", fontStyle: "italic" }}>and what we don&apos;t.</span>
           </h1>
           <div
             className="mt-4"
@@ -113,13 +128,13 @@ export default function PrivacyPage() {
               lineHeight: 1.5,
             }}
           >
-            You can take everything back. Here, in one tap.
+            You can clear this phone. We do not have a photo library to wipe.
           </div>
 
           <div className="mt-8" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
 
-          {LEDGER.map((row, i) => (
-            <div key={i}>
+          {LEDGER.map((row) => (
+            <div key={row.title}>
               <div className="py-5">
                 <div className="flex items-baseline justify-between gap-4">
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 400 }}>
@@ -128,7 +143,7 @@ export default function PrivacyPage() {
                   <div
                     className="text-[10px] uppercase"
                     style={{
-                      letterSpacing: "0.28em",
+                      letterSpacing: "0.18em",
                       color: "#A78B71",
                       whiteSpace: "nowrap",
                     }}
@@ -151,6 +166,10 @@ export default function PrivacyPage() {
               <div style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
             </div>
           ))}
+
+          <div className="mt-8">
+            <NotMedicalAdvice />
+          </div>
 
           <div
             className="mt-8"
@@ -175,56 +194,30 @@ export default function PrivacyPage() {
                 textWrap: "pretty" as const,
               }}
             >
-              Erase everything we have on you.
+              Clear this reading on this phone.
             </div>
+            <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "rgba(42,40,38,0.7)" }}>
+              This removes the reading from this browser. It does not delete a photo Perfect Corp already received.
+            </p>
             <button
-              onClick={startErase}
+              onClick={startClear}
               disabled={phase !== "rest"}
               className="w-full mt-5 rounded-full font-medium"
               style={{
-                height: 50,
-                fontSize: 14,
+                height: 52,
+                fontSize: 15,
                 letterSpacing: "0.02em",
                 background: "#A78B71",
                 color: "#FBF8F3",
                 cursor: phase === "rest" ? "pointer" : "default",
               }}
             >
-              Erase my reading
+              Clear on this phone
             </button>
-            <div
-              className="text-center mt-4 text-[10px] uppercase"
-              style={{
-                letterSpacing: "0.28em",
-                color: "rgba(42,40,38,0.5)",
-                opacity: phase === "rest" ? 1 : 0,
-                transition: `opacity ${motion.line}ms ease ${reduceMotion ? 0 : 140}ms`,
-              }}
-            >
-              THIS IS PERMANENT · NO CONFIRMATION SCREENS · TRUSTING YOU
-            </div>
           </div>
 
-          <div
-            className="mt-12 text-center"
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontStyle: "italic",
-              fontSize: 13,
-              color: "rgba(42,40,38,0.55)",
-            }}
-          >
-            Built in the open. Audited by no one yet.
-          </div>
-          <div
-            className="mt-2 text-center text-[10px]"
-            style={{
-              color: "rgba(42,40,38,0.4)",
-              letterSpacing: "0.06em",
-              fontStyle: "italic",
-            }}
-          >
-            /privacy
+          <div className="mt-10">
+            <LegalLinks />
           </div>
         </div>
       </div>
@@ -234,48 +227,49 @@ export default function PrivacyPage() {
         aria-live="polite"
         className="fixed inset-0 min-h-screen flex flex-col items-center justify-center px-6"
         style={{
-          opacity: phase === "gone" ? 1 : 0,
-          pointerEvents: phase === "gone" ? "auto" : "none",
+          opacity: phase === "cleared" ? 1 : 0,
+          pointerEvents: phase === "cleared" ? "auto" : "none",
           transition: `opacity ${motion.gone}ms ${motion.easing}`,
         }}
       >
         <div
+          className="text-center"
           style={{
             fontFamily: "var(--font-serif)",
             fontStyle: "italic",
-            fontSize: 56,
+            fontSize: 40,
             fontWeight: 300,
             color: "#A78B71",
             letterSpacing: "-0.02em",
-            opacity: phase === "gone" ? 1 : 0,
-            transform: phase === "gone" ? motion.restY : motion.goneInY,
+            opacity: phase === "cleared" ? 1 : 0,
+            transform: phase === "cleared" ? motion.restY : motion.goneInY,
             transition: `opacity ${motion.gone}ms ${motion.easing}, transform ${motion.gone}ms ${motion.easing}`,
           }}
         >
-          Gone.
+          Cleared on this phone.
         </div>
-        <div
-          className="mt-6"
+        <p
+          className="mt-4 text-center max-w-xs text-[14px] leading-relaxed"
           style={{
-            width: 24,
-            height: 1,
-            background: "rgba(42,40,38,0.2)",
-            opacity: phase === "gone" ? 1 : 0,
+            color: "rgba(42,40,38,0.7)",
+            opacity: phase === "cleared" ? 1 : 0,
             transition: `opacity ${motion.line}ms ease ${motion.delayLine}ms`,
           }}
-        />
+        >
+          Nothing was deleted from Perfect Corp. We don&apos;t hold an account to wipe.
+        </p>
         <Link
           href="/"
           className="mt-6 inline-block"
           style={{
             fontFamily: "var(--font-serif)",
             fontStyle: "italic",
-            fontSize: 14,
+            fontSize: 16,
             color: "#A78B71",
             textDecoration: "underline",
             textUnderlineOffset: 4,
-            textDecorationThickness: 0.5,
-            opacity: phase === "gone" ? 1 : 0,
+            padding: "12px 8px",
+            opacity: phase === "cleared" ? 1 : 0,
             transition: `opacity ${motion.line}ms ease ${motion.delayLink}ms`,
           }}
         >

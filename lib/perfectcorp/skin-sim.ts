@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { uploadFile, createTask, pollTask } from "./client";
+import { PerfectCorpError, uploadFile, createTask, pollTask } from "./client";
 import { cacheGet, cacheSet, cacheKey } from "../cache";
 import type { ProcessedImage } from "../image-utils";
 
@@ -22,7 +22,39 @@ interface SkinSimResults {
   output?: Array<{ url?: string }>;
   image_url?: string;
   output_url?: string;
+  download_url?: string;
   url?: string;
+}
+
+/**
+ * Live task body uses the documented names.
+ * `wrinkle` and `dark_circle` are singular. The old plural keys are rejected.
+ */
+function toApiParams(clamped: Omit<SkinSimParams, "sourceUrl">) {
+  return {
+    radiance: clamped.radiance,
+    wrinkle: clamped.wrinkles,
+    spots: clamped.spots,
+    eye_bags: clamped.eye_bags,
+    dark_circle: clamped.dark_circles,
+    pores: clamped.pores,
+    texture: clamped.texture,
+    redness: clamped.redness,
+    oiliness: clamped.oiliness,
+    acne: clamped.acne,
+  };
+}
+
+function firstImageUrl(results: SkinSimResults): string | null {
+  // Documented success body is TaskStatusResponseBodySingleUrlResultsV2: `{ url }`.
+  const direct = [results.url, results.image_url, results.output_url, results.download_url];
+  for (const candidate of direct) {
+    if (typeof candidate === "string" && candidate.startsWith("http")) return candidate;
+  }
+  for (const item of results.output ?? []) {
+    if (typeof item?.url === "string" && item.url.startsWith("http")) return item.url;
+  }
+  return null;
 }
 
 function clamp01(v: number): number {
@@ -45,13 +77,36 @@ export async function simulateSkin(params: SkinSimParams): Promise<string> {
 
   // API requires at least one param > 0
   if (!Object.values(clamped).some((v) => v > 0)) {
-    throw new Error("At least one simulation parameter must be > 0");
+    throw new PerfectCorpError(
+      "invalid_params",
+      "At least one simulation parameter must be greater than 0.",
+    );
+  }
+
+  if (!/^https?:\/\//i.test(params.sourceUrl)) {
+    throw new PerfectCorpError(
+      "bad_source_url",
+      "Simulation source must be an absolute http(s) URL. Relative paths are only for sample photos.",
+    );
   }
 
   // Download the aging photo to get stable bytes for cache key + upload
-  const imageRes = await fetch(params.sourceUrl);
+  let imageRes: Response;
+  try {
+    imageRes = await fetch(params.sourceUrl);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "network error";
+    throw new PerfectCorpError(
+      "source_download_failed",
+      `Failed to download source image (${reason}).`,
+    );
+  }
   if (!imageRes.ok) {
-    throw new Error(`Failed to download source image (HTTP ${imageRes.status})`);
+    throw new PerfectCorpError(
+      "source_download_failed",
+      `Failed to download source image (HTTP ${imageRes.status}).`,
+      imageRes.status,
+    );
   }
   const bytes = Buffer.from(await imageRes.arrayBuffer());
   const imageHash = createHash("sha256").update(bytes).digest("hex");
@@ -80,17 +135,17 @@ export async function simulateSkin(params: SkinSimParams): Promise<string> {
   const fileId = await uploadFile("skin-simulation", image);
   const taskId = await createTask("skin-simulation", {
     src_file_id: fileId,
-    ...clamped,
+    ...toApiParams(clamped),
   });
   const results = await pollTask<SkinSimResults>("skin-simulation", taskId);
 
-  // Perfect Corp sim response: try output[0].url first, then flat fields
-  const url =
-    results.output?.[0]?.url ??
-    results.image_url ??
-    results.output_url ??
-    results.url;
-  if (!url) throw new Error("Skin simulation returned no image URL");
+  const url = firstImageUrl(results);
+  if (!url) {
+    throw new PerfectCorpError(
+      "no_image_url",
+      "Skin simulation finished but returned no image URL.",
+    );
+  }
 
   await cacheSet(key, url);
   return url;
