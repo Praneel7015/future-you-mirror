@@ -212,7 +212,11 @@ export default function CaptureStep() {
       className="flex-1 flex flex-col w-full relative"
       style={{
         background: "radial-gradient(80% 80% at 50% 45%, #2D2925 0%, #1A1714 70%, #0E0C0A 100%)",
-        minHeight: "100dvh",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       <input {...getInputProps()} />
@@ -247,7 +251,7 @@ export default function CaptureStep() {
         </div>
       )}
 
-      <div className="relative z-10 flex-1 flex flex-col px-6 pt-16 pb-12 w-full">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 py-3 w-full">
         <div
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)", fontStyle: "italic" }}
@@ -268,8 +272,11 @@ export default function CaptureStep() {
         </div>
 
         {/* Oval */}
-        <div className="flex-1 flex items-center justify-center my-8">
-          <div className="relative" style={{ width: 240, height: 320 }}>
+        <div className="flex min-h-0 flex-1 items-center justify-center py-2">
+          <div
+            className="relative"
+            style={{ width: "min(210px, 56vw)", height: "min(270px, 36dvh)", ["--tick" as string]: "calc(min(270px, 36dvh) / 2 + 6px)" }}
+          >
             {/* oval container */}
             <div
               className="absolute inset-0 overflow-hidden"
@@ -309,7 +316,7 @@ export default function CaptureStep() {
                   width: 1,
                   height: 8,
                   background: "rgba(248,245,240,0.4)",
-                  transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(-168px)`,
+                  transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(calc(-1 * var(--tick)))`,
                 }}
               />
             ))}
@@ -353,7 +360,7 @@ export default function CaptureStep() {
           {statusText}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-3 shrink-0">
           <div className="flex items-center gap-3">
             {cameraState === "live" ? (
               <button
