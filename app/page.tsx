@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { KeepOnPhone } from "@/components/KeepOnPhone";
 import { LegalLinks } from "@/components/LegalNote";
 
 const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
@@ -54,7 +53,7 @@ export default function LandingPage() {
 
   return (
     <main
-      className="flex h-dvh flex-col items-center overflow-hidden px-6"
+      className="flex min-h-dvh flex-col items-center px-6"
       style={{
         background: "#F8F5F0",
         color: "#2A2826",
@@ -64,15 +63,15 @@ export default function LandingPage() {
     >
       {/* Abstract editorial hero — the "mirror" motif */}
       <motion.div
-        className="relative mb-3 w-full max-w-sm min-h-0 flex-1"
+        className="relative mb-6 w-full max-w-sm shrink-0"
         initial={fadeUp.hidden}
         animate={fadeUp.visible}
         transition={easeUp}
       >
         <div
-          className="relative h-full min-h-[112px] w-full overflow-hidden rounded-2xl"
+          className="relative w-full overflow-hidden rounded-2xl"
           style={{
-            maxHeight: 200,
+            height: 320,
             background:
               "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%), radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.35), transparent 65%), linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
           }}
@@ -248,11 +247,7 @@ export default function LandingPage() {
           <LegalLinks compact />
         </motion.div>
 
-        <motion.div className="mt-2" variants={fadeUp} transition={easeUp}>
-          <KeepOnPhone />
-        </motion.div>
-
-        <motion.div className="mt-1 text-center" variants={fadeUp} transition={easeUp}>
+        <motion.div className="mt-2 text-center" variants={fadeUp} transition={easeUp}>
           <a
             href="https://www.praneel.tech"
             target="_blank"
