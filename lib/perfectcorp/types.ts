@@ -123,10 +123,22 @@ export interface SkinAnalysisOutput {
   output: SkinOutputItem[];
 }
 
+export interface ConcernScore {
+  raw: number;
+  ui: number;
+  /**
+   * HTTPS mask image URLs from Skin Analysis `mask_urls`.
+   * Absent when the task JSON does not include them.
+   */
+  maskUrls?: string[];
+}
+
 export interface SkinResult {
-  concerns: Record<SdConcern, { raw: number; ui: number }>;
+  concerns: Record<SdConcern, ConcernScore>;
   overallScore: number | null;
   skinAge: number | null;
+  /** HTTPS URL from a `resize_image` output item, when the task includes one. */
+  resizedImageUrl?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────

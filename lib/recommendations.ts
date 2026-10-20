@@ -268,6 +268,78 @@ export function dietContext(
   };
 }
 
+export const CONCERN_NAME: Record<SdConcern, string> = {
+  wrinkle: "Fine lines",
+  droopy_upper_eyelid: "Upper lid",
+  droopy_lower_eyelid: "Lower lid",
+  firmness: "Firmness",
+  acne: "Breakouts",
+  moisture: "Dryness",
+  eye_bag: "Under-eye",
+  dark_circle_v2: "Dark circles",
+  age_spot: "Spots",
+  radiance: "Dullness",
+  redness: "Redness",
+  oiliness: "Oil",
+  pore: "Pores",
+  texture: "Texture",
+};
+
+const FOOD_SCOPE =
+  "Food notes on this mirror are only for breakouts and redness. This concern is not one of those. This is not a diet, and acne is not your fault.";
+
+/** One food note for the concern card. Wording comes from notes we already cite. */
+export function foodNoteFor(concern: SdConcern): { body: string; citations: Citation[] } {
+  if (concern === "acne") {
+    const note = DIET_NOTES.find((item) => item.id === "blood-sugar");
+    return { body: note?.body ?? FOOD_SCOPE, citations: note?.citations ?? DIET_INTRO_CITATIONS };
+  }
+  if (concern === "oiliness") {
+    const note = DIET_NOTES.find((item) => item.id === "inflammation");
+    return { body: note?.body ?? FOOD_SCOPE, citations: note?.citations ?? DIET_INTRO_CITATIONS };
+  }
+  if (concern === "redness") {
+    return { body: DIET_INTRO, citations: DIET_INTRO_CITATIONS };
+  }
+  return { body: FOOD_SCOPE, citations: DIET_INTRO_CITATIONS };
+}
+
+export type MonthSuggestion = {
+  title: string;
+  body: string;
+  productType: string | null;
+  citations: Citation[];
+};
+
+/** The split-step choice, using recommendation and diet copy we already cite. */
+export function monthSuggestion(id: "spf" | "cleanser" | "sugar"): MonthSuggestion {
+  if (id === "spf") {
+    const rec = RECOMMENDATIONS.age_spot;
+    return {
+      title: "SPF most mornings",
+      body: rec.action,
+      productType: rec.productType,
+      citations: rec.citations,
+    };
+  }
+  if (id === "cleanser") {
+    const rec = RECOMMENDATIONS.oiliness;
+    return {
+      title: "A gentle cleanser",
+      body: rec.action,
+      productType: rec.productType,
+      citations: rec.citations,
+    };
+  }
+  const note = DIET_NOTES.find((item) => item.id === "blood-sugar");
+  return {
+    title: "Fewer sugary drinks",
+    body: note?.body ?? "",
+    productType: null,
+    citations: note?.citations ?? [],
+  };
+}
+
 export function dietScoreSentence(acne: number | null, redness: number | null): string {
   const parts: string[] = [];
   if (acne !== null) parts.push(`acne ${acne}`);

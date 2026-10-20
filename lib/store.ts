@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
+import type { MonthChangeId } from "@/lib/month-change";
 
 export type MirrorStep =
   | "consent"
@@ -22,6 +23,7 @@ interface MirrorState {
   routine: number;
 
   scrubAge: number;
+  monthChange: MonthChangeId | null;
 
   setStep: (step: MirrorStep) => void;
   setResult: (result: AnalyzeResponse) => void;
@@ -31,6 +33,7 @@ interface MirrorState {
   setSleep: (v: number) => void;
   setRoutine: (v: number) => void;
   setScrubAge: (v: number) => void;
+  setMonthChange: (monthChange: MonthChangeId) => void;
   reset: () => void;
 }
 
@@ -43,6 +46,7 @@ const initial = {
   sleep: 55,
   routine: 82,
   scrubAge: 45,
+  monthChange: null as MonthChangeId | null,
 };
 
 export const useMirror = create<MirrorState>((set) => ({
@@ -55,6 +59,7 @@ export const useMirror = create<MirrorState>((set) => ({
   setSleep: (sleep) => set({ sleep }),
   setRoutine: (routine) => set({ routine }),
   setScrubAge: (scrubAge) => set({ scrubAge }),
+  setMonthChange: (monthChange) => set({ monthChange }),
   reset: () => set(initial),
 }));
 

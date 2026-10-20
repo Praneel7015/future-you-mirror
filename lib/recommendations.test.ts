@@ -8,6 +8,8 @@ import {
   RECOMMENDATIONS,
   dietContext,
   dietScoreSentence,
+  foodNoteFor,
+  monthSuggestion,
 } from "./recommendations.ts";
 
 const CONCERNS = [
@@ -77,6 +79,34 @@ describe("recommendations", () => {
     assert.equal(shown.acne, 99);
     assert.match(dietScoreSentence(shown.acne, shown.redness), /acne 99/);
     assert.match(dietScoreSentence(shown.acne, shown.redness), /higher means healthier/i);
+  });
+
+  it("puts one cited food note on a concern", () => {
+    const acne = foodNoteFor("acne");
+    assert.match(acne.body, /sugary drinks/i);
+    assert.doesNotMatch(acne.body, /you should cut|detox|guilty|lose weight/i);
+    for (const cite of acne.citations) assertCitation(cite.href);
+
+    const lid = foodNoteFor("droopy_lower_eyelid");
+    assert.match(lid.body, /not a diet/i);
+    assert.match(lid.body, /not your fault/i);
+    for (const cite of lid.citations) assertCitation(cite.href);
+  });
+
+  it("reveals the matching suggestion for each monthly choice", () => {
+    const spf = monthSuggestion("spf");
+    const cleanser = monthSuggestion("cleanser");
+    const sugar = monthSuggestion("sugar");
+    assert.match(spf.productType ?? "", /SPF 30/);
+    assert.match(cleanser.productType ?? "", /face wash/i);
+    assert.equal(sugar.productType, null);
+    assert.match(sugar.body, /sugary drinks/i);
+    for (const suggestion of [spf, cleanser, sugar]) {
+      assert.ok(suggestion.body.length > 20);
+      assert.ok(suggestion.citations.length > 0);
+      assert.doesNotMatch(suggestion.body, /you should cut|detox|guilty|lose weight/i);
+      for (const cite of suggestion.citations) assertCitation(cite.href);
+    }
   });
 
   it("keeps the medical disclaimer stable", () => {

@@ -18,7 +18,8 @@ Locally: [http://localhost:3000/mirror?demo=true](http://localhost:3000/mirror?d
 | --- | --- |
 | **Try with sample photo** (`/mirror?demo=true`) | Loads `public/sample.json` and baked portraits in `public/sample-photos/`. The with-care side uses `public/sample-photos/with-care/`. **Perfect Corp is not called.** |
 | **Begin the Mirror Test** | Consent, then camera or upload. The photo is sent to Perfect Corp for **AI Skin Analysis**, **AI Aging**, and **AI Skin Simulation** when the server key is set. |
-| Insights | Top concerns map to an ingredient and a product *type*. A few named products are labeled examples, not endorsements or a shop. Food notes for acne and inflammation link to AAD and NIH. |
+| One change this month | On the split step, three choices: SPF most mornings, a gentle cleanser, or fewer sugary drinks. Demo stays on the baked with-care photo. A live reading sends that choice to skin simulation. |
+| Insights | Tap a concern on her photo. If the skin-analysis JSON includes `mask_urls`, that mask is the highlight. The sample reading has none, so the demo uses tappable chips. One card: what it is, one product type, one food note, and the citation. |
 | Privacy / Terms | `/privacy` and `/terms`. Clearing the phone does not delete a Perfect Corp copy. |
 
 YouCam APIs used on the live path: `skin-analysis`, `aging`, `skin-simulation`.
