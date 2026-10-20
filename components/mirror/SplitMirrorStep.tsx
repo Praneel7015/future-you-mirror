@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMirror, findClosestPhoto } from "@/lib/store";
 import type { SimulateResponse } from "@/app/api/simulate/route";
 import { applyLifestyleDeltas, withoutOverlayIntensities } from "@/lib/lifestyle-deltas";
+import { isSamplePhotoSource, plainSimulateFailure } from "@/lib/simulate-plan";
 
 type ToggleMode = "current" | "today";
 
@@ -16,6 +18,8 @@ function spelled(n: number): string {
 }
 
 export default function SplitMirrorStep() {
+  const params = useSearchParams();
+  const isDemo = params.get("demo") === "true";
   const result = useMirror((s) => s.result);
   const setStep = useMirror((s) => s.setStep);
 
@@ -42,6 +46,8 @@ export default function SplitMirrorStep() {
   const effRoutine = isToday ? 100 : routine;
 
   const [simUrl, setSimUrl] = useState<string | null>(null);
+  const [simMode, setSimMode] = useState<"demo" | "live" | null>(null);
+  const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSimKey = useRef<string>("");
@@ -55,9 +61,9 @@ export default function SplitMirrorStep() {
   const photoUrl = photo?.url;
   if (photoUrl !== prevPhotoUrlRef.current) {
     prevPhotoUrlRef.current = photoUrl;
-    if (simUrl !== null) {
-      setSimUrl(null);
-    }
+    if (simUrl !== null) setSimUrl(null);
+    if (simMode !== null) setSimMode(null);
+    if (simError !== null) setSimError(null);
   }
 
   const simParams = useMemo(() => ({
@@ -73,36 +79,50 @@ export default function SplitMirrorStep() {
     acne: (effRoutine * 0.5 + effHyd * 0.3 + effSleep * 0.2) / 100,
   }), [effSun, effHyd, effSleep, effRoutine]);
 
+  const useBaked = Boolean(photo && (isDemo || isSamplePhotoSource(photo.url)));
+
   useEffect(() => {
     if (!photo) return;
 
-    const key = `${photo.url}|${JSON.stringify(simParams)}`;
+    const key = `${photo.url}|${useBaked ? "demo" : JSON.stringify(simParams)}`;
     if (key === lastSimKey.current) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       lastSimKey.current = key;
       setSimLoading(true);
+      setSimError(null);
       try {
-        const res = await fetch("/api/simulate", {
+        const res = await fetch(useBaked ? "/api/simulate?demo=true" : "/api/simulate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceUrl: photo.url, ...simParams }),
+          body: JSON.stringify(
+            useBaked ? { sourceUrl: photo.url, demo: true } : { sourceUrl: photo.url, ...simParams },
+          ),
         });
-        if (!res.ok) return;
-        const data = (await res.json()) as SimulateResponse;
+        const data = (await res.json()) as Partial<SimulateResponse> & { error?: string; message?: string };
+        if (!res.ok || !data.imageUrl) {
+          setSimUrl(null);
+          setSimMode(null);
+          setSimError(plainSimulateFailure(data.error, data.message));
+          return;
+        }
         setSimUrl(data.imageUrl);
+        setSimMode(data.mode ?? (useBaked ? "demo" : "live"));
+        setSimError(null);
       } catch {
-        // silent — falls back to CSS filter
+        setSimUrl(null);
+        setSimMode(null);
+        setSimError(plainSimulateFailure("simulation_failed", "The request did not finish."));
       } finally {
         setSimLoading(false);
       }
-    }, 1200);
+    }, useBaked ? 250 : 1200);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [photo, simParams]);
+  }, [photo, simParams, useBaked]);
 
   const savedYears = useMemo(() => {
     const avg = (sun + hyd + sleepVal + routine) / 4;
@@ -214,9 +234,7 @@ export default function SplitMirrorStep() {
                 left: 0,
                 top: 0,
                 objectPosition: "center 25%",
-                filter: simUrl
-                  ? "brightness(1.04) saturate(1.08)"
-                  : `brightness(${1.02}) contrast(0.96) saturate(1.08)`,
+                filter: simUrl ? "brightness(1.04) saturate(1.08)" : "none",
                 transition: "filter 700ms ease, opacity 600ms ease",
                 opacity: simLoading && !simUrl ? 0.7 : 1,
               }}
@@ -316,7 +334,7 @@ export default function SplitMirrorStep() {
             className="flex-1 text-center text-[9px]"
             style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.9)", fontWeight: 500 }}
           >
-            WITH CARE
+            {simError ? "NOT SIMULATED" : "WITH CARE"}
           </div>
           <div
             className="flex-1 text-center text-[9px]"
@@ -463,25 +481,45 @@ export default function SplitMirrorStep() {
           ))}
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-[10px]" style={{ color: "rgba(248,245,240,0.38)", fontStyle: "italic", letterSpacing: "0.04em" }}>
-            {simLoading ? "Simulating your care path…" : simUrl ? "AI skin simulation applied" : ""}
-          </div>
-          <button
-            onClick={() => setStep("insights")}
-            className="rounded-full font-medium"
-            style={{
-              height: 40,
-              padding: "0 20px",
-              background: "rgba(248,245,240,0.92)",
-              color: "#2A2826",
-              fontSize: 12,
-              letterSpacing: "0.04em",
-            }}
+        {simError && (
+          <p
+            role="alert"
+            className="mt-5 text-[13px] leading-snug"
+            style={{ color: "#F5D4B8", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           >
-            See your insights →
-          </button>
-        </div>
+            {simError}
+          </p>
+        )}
+
+        <p
+          className="mt-6 text-[13px] leading-snug"
+          style={{ color: "rgba(248,245,240,0.62)", fontFamily: "var(--font-serif)", fontStyle: "italic", minHeight: 20 }}
+        >
+          {simLoading
+            ? useBaked
+              ? "Loading the sample with-care photo…"
+              : "Making the with-care photo…"
+            : simError
+              ? "Simulation did not run."
+              : simMode === "demo"
+                ? "Sample photo. Perfect Corp was not called."
+                : simMode === "live"
+                  ? "With-care photo from Perfect Corp."
+                  : ""}
+        </p>
+        <button
+          onClick={() => setStep("insights")}
+          className="mt-4 w-full rounded-full font-medium"
+          style={{
+            height: 52,
+            background: "rgba(248,245,240,0.92)",
+            color: "#2A2826",
+            fontSize: 15,
+            letterSpacing: "0.02em",
+          }}
+        >
+          See your insights
+        </button>
       </div>
     </div>
   );

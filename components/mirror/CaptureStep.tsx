@@ -51,7 +51,7 @@ export default function CaptureStep() {
   const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [statusText, setStatusText] = useState("Soft light, eyes forward, no glasses.");
+  const [statusText, setStatusText] = useState("Soft light. Look at the phone. Glasses off if you can.");
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -74,7 +74,7 @@ export default function CaptureStep() {
       fd.append("image", file);
 
       setProgress(0);
-      setStatusText(`Reading · ${file.name.length > 28 ? file.name.slice(0, 28) + "…" : file.name}`);
+      setStatusText("Sending your photo to Perfect Corp…");
 
       const fakeProgress = setInterval(() => {
         setProgress((p) => {
@@ -97,8 +97,8 @@ export default function CaptureStep() {
         } catch {
           // Server returned non-JSON — surface a helpful message
           const msg = res.ok
-            ? "Something went wrong processing your photo. Please try again."
-            : `Server error (${res.status}). Check that API keys are configured.`;
+            ? "Something went wrong with your photo. Please try again."
+            : "The skin service isn't available right now. You can try the sample photo from the home page.";
           setError(msg);
           setStatusText(msg);
           setProgress(null);
@@ -107,10 +107,13 @@ export default function CaptureStep() {
         }
 
         if (!res.ok || !data || "error" in data) {
-          const msg =
+          const raw =
             data && "message" in data && data.message
               ? data.message
-              : "We couldn't read this photo. Try another with a clear, frontal face.";
+              : "We couldn't read this photo. Try again with your face in the light, looking at the phone.";
+          const msg = /Missing Perfect Corp env|auth failed/i.test(raw)
+            ? "This live reading can't run yet. The server still needs a Perfect Corp key. Try the sample photo on the home page."
+            : raw;
           setError(msg);
           setStatusText(msg);
           setProgress(null);
@@ -151,7 +154,7 @@ export default function CaptureStep() {
         await videoRef.current.play();
       }
       setCameraState("live");
-      setStatusText("Position your face in the oval.");
+      setStatusText("Look straight at the phone. Then tap Take the photo.");
     } catch {
       // getUserMedia not available — fall back to file input
       fileInputRef.current?.click();
@@ -244,7 +247,7 @@ export default function CaptureStep() {
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)", fontStyle: "italic" }}
         >
-          Capture
+          Your photo
         </div>
         <div
           className="mt-2"
@@ -256,7 +259,7 @@ export default function CaptureStep() {
             lineHeight: 1.25,
           }}
         >
-          Frame your face within the oval.
+          Take a selfie, or choose a photo you already have.
         </div>
 
         {/* Oval */}
@@ -343,7 +346,7 @@ export default function CaptureStep() {
                   letterSpacing: "0.02em",
                 }}
               >
-                Capture
+                Take the photo
               </button>
             ) : (
               <button
@@ -391,10 +394,10 @@ export default function CaptureStep() {
               onClick={() => {
                 stopCamera();
                 setCameraState("idle");
-                setStatusText("Soft light, eyes forward, no glasses.");
+                setStatusText("Soft light. Look at the phone. Glasses off if you can.");
               }}
-              className="w-full mt-3 text-[11px]"
-              style={{ color: "rgba(248,245,240,0.4)", letterSpacing: "0.06em" }}
+              className="w-full mt-3 text-[14px]"
+              style={{ color: "rgba(248,245,240,0.72)", minHeight: 44, letterSpacing: "0.02em" }}
             >
               Cancel
             </button>

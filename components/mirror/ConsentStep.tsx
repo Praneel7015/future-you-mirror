@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMirror } from "@/lib/store";
+import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
+import { PHOTO_DEMO, PHOTO_LIVE } from "@/lib/copy";
 
 const LINES = [
-  "Your photo stays with you.",
-  "Processing happens through Perfect Corp's HIPAA & GDPR compliant pipeline.",
-  "Nothing is stored on our servers.",
+  "The camera stays off until you tap it.",
+  PHOTO_LIVE,
+  "We do not keep an account or a photo library.",
+  PHOTO_DEMO,
 ];
 
 export default function ConsentStep() {
@@ -81,18 +84,22 @@ export default function ConsentStep() {
       </div>
 
       <div className="mt-4">
+        <NotMedicalAdvice />
+        <div className="mt-2">
+          <LegalLinks />
+        </div>
         <Link
           href="/privacy"
-          className="inline-block font-serif italic"
+          className="inline-block font-serif italic mt-2"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             color: "var(--mocha)",
             borderBottom: "0.5px solid rgba(167,139,113,0.4)",
-            paddingBottom: 2,
+            padding: "12px 0",
             textDecoration: "none",
           }}
         >
-          Read the full ledger →
+          Read what we keep
         </Link>
       </div>
 
@@ -117,7 +124,7 @@ export default function ConsentStep() {
           className="text-center mt-4 text-[10px] uppercase"
           style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
         >
-          ⏤ HIPAA &amp; GDPR COMPLIANT VIA PERFECT CORP ⏤
+          NOT A DOCTOR · YOU CAN STOP ANY TIME
         </div>
       </div>
     </div>

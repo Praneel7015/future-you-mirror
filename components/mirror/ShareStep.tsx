@@ -273,20 +273,20 @@ export default function ShareStep() {
               await nav.share({
                 files: [file],
                 title: "Future You Mirror",
-                text: "My Future You Mirror reading.",
+                text: "A Future You Mirror reading. Not medical advice.",
                 url: pageUrl,
               });
             } catch {
               await nav.share({
                 files: [file],
                 title: "Future You Mirror",
-                text: "My Future You Mirror reading.",
+                text: "A Future You Mirror reading. Not medical advice.",
               });
             }
           } else {
             await nav.share({
               title: "Future You Mirror",
-              text: `My Future You Mirror reading — try it here: ${pageUrl}`,
+              text: `A Future You Mirror reading. Not medical advice. ${pageUrl}`,
               url: pageUrl,
             });
           }
@@ -726,7 +726,7 @@ export default function ShareStep() {
         className="text-center mt-1 text-[10px] uppercase"
         style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
       >
-        ⏤ HIPAA &amp; GDPR COMPLIANT VIA PERFECT CORP ⏤
+        Not medical advice. Not a dermatologist.
       </div>
 
       <div className="text-center mt-4">

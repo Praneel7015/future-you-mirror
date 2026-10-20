@@ -27,16 +27,19 @@ const TOKEN_TTL_MS = 90 * 60 * 1000; // 90 minutes (Perfect Corp tokens last 2 h
 let cachedToken: string | null = null;
 let cachedAt = 0;
 
+/** Documented auth host. Used when PERFECT_CORP_API_BASE is unset. */
+export const DEFAULT_API_BASE = "https://yce-api-01.perfectcorp.com";
+
 function getEnv(): { clientId: string; clientSecret: string; apiBase: string } {
-  const clientId = process.env.PERFECT_CORP_CLIENT_ID;
-  const clientSecret = process.env.PERFECT_CORP_CLIENT_SECRET;
-  const apiBase = process.env.PERFECT_CORP_API_BASE;
-  if (!clientId || !clientSecret || !apiBase) {
+  const clientId = process.env.PERFECT_CORP_CLIENT_ID?.trim();
+  const clientSecret = process.env.PERFECT_CORP_CLIENT_SECRET?.trim();
+  const apiBase = process.env.PERFECT_CORP_API_BASE?.trim() || DEFAULT_API_BASE;
+  if (!clientId || !clientSecret) {
     throw new Error(
-      "Missing Perfect Corp env vars. Required: PERFECT_CORP_CLIENT_ID, PERFECT_CORP_CLIENT_SECRET, PERFECT_CORP_API_BASE",
+      "Missing Perfect Corp env vars. Required: PERFECT_CORP_CLIENT_ID, PERFECT_CORP_CLIENT_SECRET",
     );
   }
-  return { clientId, clientSecret, apiBase };
+  return { clientId, clientSecret, apiBase: apiBase.replace(/\/+$/, "") };
 }
 
 /**

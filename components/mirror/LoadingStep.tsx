@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-const LINES = [
-  "Reading 14 dimensions of your skin…",
-  "Mapping your aging trajectory…",
-  "Securely processed via Perfect Corp.",
+const LIVE_LINES = [
+  "Reading your skin…",
+  "Your photo is sent to Perfect Corp.",
+  "Making the age pictures…",
+];
+
+const DEMO_LINES = [
+  "Loading a sample reading…",
+  "No photo is uploaded.",
+  "This is not a live skin test.",
 ];
 
 export default function LoadingStep() {
+  const isDemo = useSearchParams().get("demo") === "true";
+  const lines = isDemo ? DEMO_LINES : LIVE_LINES;
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setActive((a) => (a + 1) % LINES.length), 2000);
+    const id = setInterval(() => setActive((a) => (a + 1) % lines.length), 2000);
     return () => clearInterval(id);
-  }, []);
+  }, [lines.length]);
 
   return (
     <div
@@ -46,7 +55,7 @@ export default function LoadingStep() {
 
         {/* Crossfading lines */}
         <div className="mt-32 max-w-xs w-full text-center">
-          {LINES.map((line, i) => (
+          {lines.map((line, i) => (
             <div
               key={i}
               style={{
