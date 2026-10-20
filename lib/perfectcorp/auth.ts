@@ -1,5 +1,5 @@
 import "server-only";
-import crypto from "node:crypto";
+import { encryptIdToken } from "./public-key";
 
 /**
  * Perfect Corp authentication.
@@ -42,40 +42,13 @@ function getEnv(): { clientId: string; clientSecret: string; apiBase: string } {
   return { clientId, clientSecret, apiBase: apiBase.replace(/\/+$/, "") };
 }
 
-/**
- * Wrap a raw key string with PEM headers if missing. Perfect Corp's console
- * sometimes hands back the base64 body without the BEGIN/END envelope.
- */
-function toPem(key: string): string {
-  // Normalize: support \n literals from .env files and strip surrounding whitespace
-  const normalized = key.replace(/\\n/g, "\n").trim();
-
-  if (normalized.includes("-----BEGIN")) {
-    return normalized;
-  }
-
-  // Wrap raw base64 as an X.509 SubjectPublicKeyInfo PEM (most common for Perfect Corp)
-  const body = normalized.replace(/\s+/g, "");
-  const lines = body.match(/.{1,64}/g) ?? [];
-  return `-----BEGIN PUBLIC KEY-----\n${lines.join("\n")}\n-----END PUBLIC KEY-----`;
-}
-
-function buildIdToken(clientId: string, pemKey: string): string {
-  const plaintext = `client_id=${clientId}&timestamp=${Date.now()}`;
-  const encrypted = crypto.publicEncrypt(
-    {
-      key: pemKey,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    Buffer.from(plaintext, "utf8"),
-  );
-  return encrypted.toString("base64");
+function buildIdToken(clientId: string, secret: string): string {
+  return encryptIdToken(clientId, secret);
 }
 
 async function fetchAccessToken(): Promise<string> {
   const { clientId, clientSecret, apiBase } = getEnv();
-  const pemKey = toPem(clientSecret);
-  const idToken = buildIdToken(clientId, pemKey);
+  const idToken = buildIdToken(clientId, clientSecret);
 
   const res = await fetch(`${apiBase}/s2s/v1.0/client/auth`, {
     method: "POST",

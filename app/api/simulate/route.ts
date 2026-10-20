@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { simulateSkin, type SkinSimParams } from "@/lib/perfectcorp/skin-sim";
 import { PerfectCorpError } from "@/lib/perfectcorp/client";
+import { PublicKeyFormatError } from "@/lib/perfectcorp/public-key";
 import { publicOriginFrom, toAbsoluteRequestUrl } from "@/lib/request-absolute-url";
 import { planSimulate } from "@/lib/simulate-plan";
 
@@ -73,6 +74,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ imageUrl, mode: "live" } satisfies SimulateResponse);
   } catch (err) {
+    if (err instanceof PublicKeyFormatError) {
+      return fail(500, "invalid_public_key", err.message);
+    }
     if (err instanceof PerfectCorpError) {
       const status =
         err.code === "bad_source_url" ||

@@ -50,5 +50,6 @@ describe("simulate plan", () => {
   it("names an empty credit balance and a missing face", () => {
     assert.match(plainSimulateFailure("CreditInsufficiency", "The operation could not be completed"), /no credits/i);
     assert.match(plainSimulateFailure("error_no_face", "No face detected on source image"), /could not find a face/i);
+    assert.match(plainSimulateFailure("invalid_public_key", "paste the public key"), /RSA public key/i);
   });
 });

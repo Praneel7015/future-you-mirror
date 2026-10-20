@@ -3,6 +3,7 @@ import { processUpload, ImageError } from "@/lib/image-utils";
 import { analyzeSkin } from "@/lib/perfectcorp/skin-analysis";
 import { generateAging } from "@/lib/perfectcorp/aging";
 import { PerfectCorpError } from "@/lib/perfectcorp/client";
+import { PublicKeyFormatError } from "@/lib/perfectcorp/public-key";
 import type { SkinResult, AgingResult } from "@/lib/perfectcorp/types";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,9 @@ export async function POST(req: Request) {
     return NextResponse.json(body, { status: 200 });
   } catch (err) {
     // Always return JSON — never let Next.js return an HTML error page
+    if (err instanceof PublicKeyFormatError) {
+      return NextResponse.json({ error: "invalid_public_key", message: err.message }, { status: 500 });
+    }
     if (err instanceof PerfectCorpError) {
       return NextResponse.json(
         { error: err.code, message: err.message, httpStatus: err.httpStatus, payload: err.payload },

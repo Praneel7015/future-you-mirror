@@ -63,6 +63,9 @@ export function plainSimulateFailure(error?: string, message?: string): string {
   const detail = (message ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
   const left = "The left picture is only the aged photo, not a with-care simulation.";
 
+  if (code === "invalid_public_key") {
+    return `The server key is not the RSA public key from Perfect Corp. No with-care photo was made. ${left}`;
+  }
   if (code === "missing_credentials" || /Missing Perfect Corp env/i.test(detail)) {
     return `The live with-care photo needs a Perfect Corp key on the server. None was made. ${left}`;
   }
