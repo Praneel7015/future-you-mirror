@@ -29,21 +29,14 @@ const linkStyle = (color: string) => ({
   padding: "12px 2px",
 });
 
-export function LegalLinks({
-  tone = "light",
-  compact = false,
-}: {
-  tone?: "light" | "dark";
-  compact?: boolean;
-}) {
+export function LegalLinks({ tone = "light" }: { tone?: "light" | "dark" }) {
   const color = tone === "dark" ? "rgba(248,245,240,0.8)" : "#A78B71";
-  const style = { ...linkStyle(color), padding: compact ? "2px" : "12px 2px" };
   return (
     <nav aria-label="Legal" className="flex items-center justify-center gap-8">
-      <Link href="/privacy" style={style}>
+      <Link href="/privacy" style={linkStyle(color)}>
         Privacy
       </Link>
-      <Link href="/terms" style={style}>
+      <Link href="/terms" style={linkStyle(color)}>
         Terms
       </Link>
     </nav>

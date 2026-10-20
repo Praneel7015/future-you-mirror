@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { KeepOnPhone } from "@/components/KeepOnPhone";
 import { LegalLinks } from "@/components/LegalNote";
 
 const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
@@ -54,25 +53,25 @@ export default function LandingPage() {
 
   return (
     <main
-      className="flex h-dvh flex-col items-center overflow-hidden px-6"
+      className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8 overflow-x-hidden"
       style={{
         background: "#F8F5F0",
         color: "#2A2826",
-        paddingTop: "max(12px, env(safe-area-inset-top))",
-        paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+        paddingTop: "max(24px, env(safe-area-inset-top))",
+        paddingBottom: "max(24px, env(safe-area-inset-bottom))",
       }}
     >
       {/* Abstract editorial hero — the "mirror" motif */}
       <motion.div
-        className="relative mb-3 w-full max-w-sm min-h-0 flex-1"
+        className="relative w-full max-w-sm mb-10"
         initial={fadeUp.hidden}
         animate={fadeUp.visible}
         transition={easeUp}
       >
         <div
-          className="relative h-full min-h-[112px] w-full overflow-hidden rounded-2xl"
+          className="w-full rounded-2xl overflow-hidden relative"
           style={{
-            maxHeight: 200,
+            height: 320,
             background:
               "radial-gradient(120% 80% at 30% 20%, rgba(232,197,181,0.55), transparent 60%), radial-gradient(100% 70% at 80% 70%, rgba(167,139,113,0.35), transparent 65%), linear-gradient(180deg, #F1E8DC 0%, #E8D9C7 100%)",
           }}
@@ -153,7 +152,7 @@ export default function LandingPage() {
 
       {/* Headline + CTAs — stagger matches mirror flow (calm opacity crossfades) */}
       <motion.div
-        className="w-full max-w-sm shrink-0"
+        className="max-w-sm w-full"
         initial="hidden"
         animate="visible"
         variants={{
@@ -171,7 +170,7 @@ export default function LandingPage() {
           transition={easeUp}
           style={{
             fontFamily: "var(--font-serif)",
-            fontSize: 34,
+            fontSize: 38,
             lineHeight: 1.05,
             fontWeight: 400,
             letterSpacing: "-0.01em",
@@ -183,7 +182,7 @@ export default function LandingPage() {
         </motion.h1>
 
         <motion.p
-          className="mt-1 text-[13px] leading-snug"
+          className="mt-5 text-sm leading-relaxed"
           style={{ color: "rgba(42,40,38,0.7)", maxWidth: 320 }}
           variants={fadeUp}
           transition={easeUp}
@@ -191,12 +190,12 @@ export default function LandingPage() {
           One selfie. Two minutes. A question you&apos;ve never been asked.
         </motion.p>
 
-        <motion.div className="mt-3 space-y-2" variants={fadeUp} transition={easeUp}>
+        <motion.div className="mt-10 space-y-4" variants={fadeUp} transition={easeUp}>
           <MotionLink
             href="/mirror"
             className="flex items-center justify-center w-full rounded-full text-[15px] font-medium"
             style={{
-              height: 52,
+              height: 56,
               background: "#A78B71",
               color: "#FBF8F3",
               letterSpacing: "0.02em",
@@ -227,7 +226,7 @@ export default function LandingPage() {
         </motion.div>
 
         <motion.p
-          className="mt-3 text-center text-[10px]"
+          className="mt-6 text-center text-[10px]"
           style={{ color: "#A78B71", letterSpacing: "0.18em" }}
           variants={fadeUp}
           transition={easeUp}
@@ -236,7 +235,7 @@ export default function LandingPage() {
         </motion.p>
 
         <motion.p
-          className="mt-2 text-center text-[13px]"
+          className="mt-3 text-center text-[13px]"
           style={{ color: "#6B5D52", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           variants={fadeUp}
           transition={easeUp}
@@ -244,15 +243,11 @@ export default function LandingPage() {
           Not medical advice. Not a dermatologist.
         </motion.p>
 
-        <motion.div className="mt-2" variants={fadeUp} transition={easeUp}>
-          <LegalLinks compact />
+        <motion.div className="mt-4" variants={fadeUp} transition={easeUp}>
+          <LegalLinks />
         </motion.div>
 
-        <motion.div className="mt-2" variants={fadeUp} transition={easeUp}>
-          <KeepOnPhone />
-        </motion.div>
-
-        <motion.div className="mt-1 text-center" variants={fadeUp} transition={easeUp}>
+        <motion.div className="mt-2 text-center" variants={fadeUp} transition={easeUp}>
           <a
             href="https://www.praneel.tech"
             target="_blank"

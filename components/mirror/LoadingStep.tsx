@@ -30,11 +30,7 @@ export default function LoadingStep() {
       className="flex-1 flex flex-col w-full relative"
       style={{
         background: "radial-gradient(80% 60% at 50% 30%, #5C4E44 0%, #3A322C 50%, #2A2420 100%)",
-        height: "100%",
-        minHeight: 0,
-        overflow: "hidden",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        minHeight: "100dvh",
       }}
     >
       <div className="flex-1 flex flex-col items-center justify-center px-6">
@@ -58,7 +54,7 @@ export default function LoadingStep() {
         </div>
 
         {/* Crossfading lines */}
-        <div className="mt-10 max-w-xs w-full text-center">
+        <div className="mt-32 max-w-xs w-full text-center">
           {lines.map((line, i) => (
             <div
               key={i}
@@ -81,7 +77,7 @@ export default function LoadingStep() {
         </div>
       </div>
 
-      <div className="pb-6 text-center">
+      <div className="pb-16 text-center">
         <span
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.4)" }}
