@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
+/** Latin variable files from the same Google Fonts cuts previously loaded at build time. */
+const fraunces = localFont({
+  src: "./fonts/Fraunces-latin.woff2",
   variable: "--font-fraunces",
-  axes: ["opsz"],
-  weight: "variable",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  src: "./fonts/Inter-latin.woff2",
   variable: "--font-inter",
-  weight: ["400", "500"],
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
