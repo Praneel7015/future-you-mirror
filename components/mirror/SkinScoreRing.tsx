@@ -18,15 +18,17 @@ interface Props {
   score: number;
   betterThan: number;
   size?: number;
+  /** Ring and number only, for a one-screen header. */
+  compact?: boolean;
 }
 
-export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) {
+export default function SkinScoreRing({ score, betterThan, size = 200, compact = false }: Props) {
   const r = size * 0.45;
   const cx = size / 2;
   const cy = size / 2;
   const C = 2 * Math.PI * r;
   const filled = (Math.max(0, Math.min(100, score)) / 100) * C;
-  const band = bandFor(score);
+  const band = compact ? null : bandFor(score);
 
   return (
     <div className="flex flex-col items-center">
@@ -80,6 +82,7 @@ export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) 
         </div>
       </div>
 
+      {!compact && (
       <div
         className="mt-4"
         style={{
@@ -90,9 +93,11 @@ export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) 
           fontWeight: 400,
         }}
       >
-        {band.name}
+        {band?.name}
       </div>
+      )}
 
+      {!compact && (
       <div
         className="mt-2 text-[12px] uppercase"
         style={{
@@ -103,6 +108,7 @@ export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) 
       >
         BETTER THAN {Math.round(betterThan)}% OF READINGS
       </div>
+      )}
     </div>
   );
 }

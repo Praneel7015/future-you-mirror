@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -19,6 +19,13 @@ const inter = localFont({
   style: "normal",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#2A2826",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -42,6 +49,12 @@ export const metadata: Metadata = {
     title: "Future You Mirror",
     description:
       "See the skin you'll have — and the one you could. One selfie. Two minutes.",
+  },
+  applicationName: "Future You Mirror",
+  appleWebApp: {
+    capable: true,
+    title: "Future You Mirror",
+    statusBarStyle: "default",
   },
 };
 

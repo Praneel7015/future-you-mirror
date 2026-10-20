@@ -12,6 +12,7 @@ import {
   type Citation,
 } from "@/lib/recommendations";
 import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
+import { QuietChoice } from "./QuietChoice";
 import SkinScoreRing from "./SkinScoreRing";
 
 function CitationList({ citations }: { citations: Citation[] }) {
@@ -23,12 +24,12 @@ function CitationList({ citations }: { citations: Citation[] }) {
             href={cite.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block text-[13px]"
+            className="inline-block text-[12px]"
             style={{
               color: "#A78B71",
               textDecoration: "underline",
               textUnderlineOffset: 3,
-              padding: "8px 0",
+              padding: "2px 0",
             }}
           >
             {cite.label}
@@ -89,35 +90,44 @@ export default function InsightsStep() {
   const faceSrc = maskUrl && result.skin.resizedImageUrl ? result.skin.resizedImageUrl : agingFace;
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
-      <div
-        className="text-[10px] uppercase"
-        style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
-      >
-        Your reading
+    <div
+      className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col overflow-hidden"
+      style={{
+        paddingTop: "max(8px, env(safe-area-inset-top))",
+        paddingBottom: "max(8px, env(safe-area-inset-bottom))",
+        paddingLeft: "max(20px, env(safe-area-inset-left))",
+        paddingRight: "max(20px, env(safe-area-inset-right))",
+      }}
+    >
+      <div className="flex shrink-0 items-end justify-between gap-3">
+        <div>
+          <div
+            className="text-[10px] uppercase"
+            style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
+          >
+            Your reading
+          </div>
+          <h1
+            className="mt-1"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 26,
+              lineHeight: 1.05,
+              fontWeight: 400,
+            }}
+          >
+            Tap a concern.
+          </h1>
+        </div>
+        <SkinScoreRing score={score} betterThan={Math.round(score)} size={64} compact />
       </div>
 
-      <h1
-        className="mt-8"
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: 28,
-          lineHeight: 1.1,
-          fontWeight: 400,
-        }}
-      >
-        Tap a concern.
-      </h1>
-      <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "rgba(42,40,38,0.7)" }}>
-        The soft light marks the one to look at first.
-      </p>
-
       <div
-        className="relative mt-5 overflow-hidden"
+        className="relative mt-3 min-h-0 flex-1 overflow-hidden"
         style={{
-          height: 440,
-          borderRadius: 24,
+          borderRadius: 18,
           background: "#E7DDD2",
+          minHeight: 140,
         }}
       >
         {faceSrc && (
@@ -153,80 +163,54 @@ export default function InsightsStep() {
             background: "linear-gradient(180deg, rgba(26,22,18,0) 46%, rgba(26,22,18,0.55) 100%)",
           }}
         />
-        <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2">
-          {chips.map((chip) => {
-            const on = chip.key === selected;
-            const isTop = chip.key === topKey;
-            return (
-              <button
-                key={chip.key}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setPicked(chip.key)}
-                className="w-full rounded-full text-left"
-                style={{
-                  minHeight: 48,
-                  padding: "10px 16px",
-                  fontFamily: "var(--font-serif)",
-                  fontSize: 17,
-                  background: on ? "#FBF8F3" : "rgba(251,248,243,0.88)",
-                  color: "#2A2826",
-                  boxShadow: isTop ? "0 0 0 2px #F5D4B8" : "none",
-                }}
-              >
-                {CONCERN_NAME[chip.key]}
-              </button>
-            );
-          })}
+        <div
+          className="absolute inset-x-4 bottom-1"
+          style={{ textShadow: "0 1px 10px rgba(14,12,10,0.75)" }}
+        >
+          {chips.map((chip) => (
+            <QuietChoice
+              key={chip.key}
+              label={CONCERN_NAME[chip.key]}
+              selected={chip.key === selected}
+              onClick={() => setPicked(chip.key)}
+            />
+          ))}
         </div>
       </div>
 
       {rec && food && selectedScore && (
-        <article
-          className="mt-5 bg-white rounded-2xl"
-          style={{
-            padding: "16px",
-            border: "1px solid rgba(42,40,38,0.06)",
-            boxShadow: "0 1px 2px rgba(42,40,38,0.03)",
-          }}
-        >
+        <article className="mt-2 shrink-0" style={{ borderTop: "1px solid rgba(42,40,38,0.12)", paddingTop: 8 }}>
           <h2
             style={{
               fontFamily: "var(--font-serif)",
-              fontSize: 26,
+              fontStyle: "italic",
+              fontSize: 20,
               fontWeight: 400,
               lineHeight: 1.15,
             }}
           >
             {CONCERN_NAME[rec.concern]}
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(42,40,38,0.78)" }}>
+          <p className="mt-1 text-[13px] leading-snug" style={{ color: "rgba(42,40,38,0.78)" }}>
             {rec.action}
           </p>
-          <p className="mt-4 text-[14px] leading-relaxed" style={{ color: "#2A2826" }}>
+          <p className="mt-1 text-[13px] leading-snug" style={{ color: "#2A2826" }}>
             Product: {rec.productType}
           </p>
-          <p className="mt-3 text-[14px] leading-relaxed" style={{ color: "rgba(42,40,38,0.78)" }}>
+          <p className="mt-1 text-[13px] leading-snug" style={{ color: "rgba(42,40,38,0.78)" }}>
             {food.body}
           </p>
           <CitationList citations={uniqueCitations([rec.citations, food.citations])} />
         </article>
       )}
 
-      <div className="mt-8 flex justify-center">
-        <SkinScoreRing score={score} betterThan={Math.round(score)} size={148} />
-      </div>
-
-      <div className="mt-8">
+      <div className="mt-2 shrink-0">
         <NotMedicalAdvice />
-      </div>
-
-      <div className="mt-6">
         <button
           onClick={() => setStep("share")}
-          className="w-full rounded-full font-medium"
+          className="mt-2 w-full rounded-full font-medium"
           style={{
-            height: 56,
+            height: 48,
             fontSize: 15,
             letterSpacing: "0.02em",
             background: "#A78B71",
@@ -235,14 +219,8 @@ export default function InsightsStep() {
         >
           Save your reading
         </button>
-        <div
-          className="text-center mt-3 text-[12px]"
-          style={{ color: "#6B5D52", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
-        >
-          We don&apos;t post this. You choose.
-        </div>
-        <div className="mt-2">
-          <LegalLinks />
+        <div className="mt-1">
+          <LegalLinks compact />
         </div>
       </div>
     </div>

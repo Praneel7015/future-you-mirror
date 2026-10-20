@@ -120,6 +120,8 @@ export default function ShareStep() {
   }
 
   const PREVIEW_W = 270;
+  const PREVIEW_H = scaleSharePx(SHARE_CARD_H, PREVIEW_W);
+  const PREVIEW_SCALE = 0.56;
   const L = shareCardLayout;
   const sc = (n: number) => scaleSharePx(n, PREVIEW_W);
   const ringR = sc(L.stats.ringRadius);
@@ -324,10 +326,18 @@ export default function ShareStep() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
+    <div
+      className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col overflow-hidden"
+      style={{
+        paddingTop: "max(8px, env(safe-area-inset-top))",
+        paddingBottom: "max(8px, env(safe-area-inset-bottom))",
+        paddingLeft: "max(20px, env(safe-area-inset-left))",
+        paddingRight: "max(20px, env(safe-area-inset-right))",
+      }}
+    >
       <button
         onClick={() => setStep("insights")}
-        className="text-[10px] uppercase self-start mb-6"
+        className="mb-1 shrink-0 self-start text-[10px] uppercase"
         style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
       >
         ← back
@@ -343,7 +353,7 @@ export default function ShareStep() {
         className="mt-2"
         style={{
           fontFamily: "var(--font-serif)",
-          fontSize: 28,
+          fontSize: 24,
           lineHeight: 1.1,
           fontWeight: 400,
         }}
@@ -354,13 +364,18 @@ export default function ShareStep() {
       </h1>
 
       {/* Preview uses the same layout spec as POST /api/share-card (1080×1920 PNG) */}
-      <div className="flex-1 flex items-center justify-center my-6">
-        <div className="flex flex-col items-center">
+      <div className="my-1 flex min-h-0 flex-1 items-center justify-center">
+        <div
+          className="relative shrink-0"
+          style={{ width: PREVIEW_W * PREVIEW_SCALE, height: PREVIEW_H * PREVIEW_SCALE }}
+        >
           <div
-            className="relative overflow-hidden"
+            className="absolute left-0 top-0 overflow-hidden"
             style={{
               width: PREVIEW_W,
-              height: scaleSharePx(SHARE_CARD_H, PREVIEW_W),
+              height: PREVIEW_H,
+              transform: `scale(${PREVIEW_SCALE})`,
+              transformOrigin: "top left",
               borderRadius: sc(L.outerRadius),
               boxShadow: "0 24px 48px -16px rgba(42,40,38,0.22), 0 8px 20px -8px rgba(42,40,38,0.10)",
               background: shareCardBackgroundFull,
@@ -617,12 +632,6 @@ export default function ShareStep() {
               </div>
             </div>
           </div>
-          <div
-            className="mt-3 text-[10px]"
-            style={{ color: "rgba(42,40,38,0.5)", fontStyle: "italic", letterSpacing: "0.06em" }}
-          >
-            1080 × 1920 · ready to save
-          </div>
         </div>
       </div>
 
@@ -633,7 +642,7 @@ export default function ShareStep() {
         disabled={cardBusy}
         className="w-full rounded-full font-medium"
         style={{
-          height: 52,
+          height: 48,
           fontSize: 14,
           letterSpacing: "0.02em",
           background: "#A78B71",
@@ -652,7 +661,7 @@ export default function ShareStep() {
           disabled={cardBusy}
           className="rounded-full"
           style={{
-            height: 64,
+            height: 44,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -674,7 +683,7 @@ export default function ShareStep() {
           onClick={onCopyLink}
           className="rounded-full"
           style={{
-            height: 64,
+            height: 44,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -696,7 +705,7 @@ export default function ShareStep() {
           disabled={cardBusy}
           className="rounded-full"
           style={{
-            height: 64,
+            height: 44,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -716,20 +725,20 @@ export default function ShareStep() {
       </div>
 
       <div
-        className="text-center mt-4 text-[11px]"
+        className="mt-1 text-center text-[11px]"
         style={{ color: "rgba(42,40,38,0.55)", fontStyle: "italic", minHeight: 16 }}
       >
         {statusText ?? " "}
       </div>
 
       <div
-        className="text-center mt-1 text-[10px] uppercase"
+        className="mt-1 text-center text-[10px] uppercase"
         style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
       >
         Not medical advice. Not a dermatologist.
       </div>
 
-      <div className="text-center mt-4">
+      <div className="mt-1 text-center">
         <a
           href="https://www.praneel.tech"
           target="_blank"

@@ -62,11 +62,13 @@ export default function MorphStep() {
       style={{
         background:
           "radial-gradient(80% 80% at 50% 45%, #2D2925 0%, #1A1714 70%, #0E0C0A 100%)",
-        minHeight: "100dvh",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
       }}
     >
       {/* eyebrow crossfade */}
-      <div className="absolute left-0 right-0 text-center" style={{ top: 100 }}>
+      <div className="absolute left-0 right-0 text-center" style={{ top: "max(16px, env(safe-area-inset-top))" }}>
         <div className="relative" style={{ height: 14 }}>
           <div
             className="absolute inset-0 text-[10px] uppercase"
@@ -96,7 +98,13 @@ export default function MorphStep() {
       {/* oval with crossfade and traced arc */}
       <div
         className="absolute"
-        style={{ top: 152, left: "50%", transform: "translateX(-50%)", width: 260, height: 340 }}
+        style={{
+          top: "calc(max(16px, env(safe-area-inset-top)) + 28px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "min(240px, 62vw)",
+          height: "min(320px, 46dvh)",
+        }}
       >
         <div
           className="absolute inset-0 overflow-hidden"
@@ -173,7 +181,7 @@ export default function MorphStep() {
       {/* captions */}
       <div
         className="absolute text-center"
-        style={{ top: 532, left: 24, right: 24, height: 28 }}
+        style={{ bottom: "max(28px, env(safe-area-inset-bottom))", left: 24, right: 24, height: 28 }}
       >
         {captions.map((c, i) => (
           <div
