@@ -57,35 +57,3 @@ export function planSimulate(input: { sourceUrl?: string; demo?: boolean }): Sim
   return { action: "live" };
 }
 
-/** Youth-readable failure. Never sounds like the CSS filter succeeded. */
-export function plainSimulateFailure(error?: string, message?: string): string {
-  const code = error ?? "";
-  const detail = (message ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
-  const left = "The left picture is only the aged photo, not a with-care simulation.";
-
-  if (code === "missing_credentials" || /Missing Perfect Corp env/i.test(detail)) {
-    return `The live with-care photo needs a Perfect Corp key on the server. None was made. ${left}`;
-  }
-  if (code === "auth_failed" || /auth failed/i.test(detail)) {
-    return `Perfect Corp did not accept the server key. No with-care photo was made. ${left}`;
-  }
-  if (code === "source_download_failed" || code === "bad_source_url") {
-    return `We could not open the photo to simulate. No with-care photo was made. ${left}`;
-  }
-  if (code === "demo_asset_missing") {
-    return "The sample with-care photo is missing. Perfect Corp was not called.";
-  }
-  if (code === "CreditInsufficiency" || /insufficient unit|no credits/i.test(detail)) {
-    return `Perfect Corp has no credits left for this photo. No with-care photo was made. ${left}`;
-  }
-  if (code === "error_no_face" || /no face/i.test(detail)) {
-    return `Perfect Corp could not find a face in that photo. No with-care photo was made. ${left}`;
-  }
-  if (code === "InvalidParameters" || code === "invalid_parameter" || code === "BadRequest") {
-    return `Perfect Corp rejected the simulation request. No with-care photo was made. ${left}`;
-  }
-  if (detail) {
-    return `No with-care photo was made. ${left} (${detail})`;
-  }
-  return `No with-care photo was made. ${left}`;
-}

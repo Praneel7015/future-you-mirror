@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { simulateSkin, type SkinSimParams } from "@/lib/perfectcorp/skin-sim";
 import { PerfectCorpError } from "@/lib/perfectcorp/client";
 import { publicOriginFrom, toAbsoluteRequestUrl } from "@/lib/request-absolute-url";
+import { plainMirrorError } from "@/lib/plain-errors";
 import { planSimulate } from "@/lib/simulate-plan";
 
 export const runtime = "nodejs";
@@ -80,15 +81,17 @@ export async function POST(req: NextRequest) {
         err.code === "invalid_params"
           ? 400
           : 502;
-      return fail(status, err.code, err.message);
+      console.error("[simulate]", err.code, err.message);
+      return fail(status, err.code, plainMirrorError({ code: err.code, message: err.message }));
     }
     const message = err instanceof Error ? err.message : "Simulation failed";
+    console.error("[simulate]", message);
     if (/Missing Perfect Corp env/i.test(message)) {
-      return fail(503, "missing_credentials", message);
+      return fail(503, "missing_credentials", plainMirrorError({ code: "missing_credentials", message }));
     }
     if (/auth failed/i.test(message)) {
-      return fail(502, "auth_failed", message);
+      return fail(502, "auth_failed", plainMirrorError({ code: "auth_failed", message }));
     }
-    return fail(502, "simulation_failed", message);
+    return fail(502, "simulation_failed", plainMirrorError({ code: "simulation_failed", message }));
   }
 }

@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  bakedWithCareUrl,
-  isSamplePhotoSource,
-  plainSimulateFailure,
-  planSimulate,
-} from "./simulate-plan.ts";
+import { bakedWithCareUrl, isSamplePhotoSource, planSimulate } from "./simulate-plan.ts";
 
 describe("simulate plan", () => {
   it("treats sample photos as demo, including absolute URLs", () => {
@@ -40,15 +35,4 @@ describe("simulate plan", () => {
     });
   });
 
-  it("says a failure is not a with-care photo", () => {
-    const text = plainSimulateFailure("missing_credentials", "Missing Perfect Corp env vars");
-    assert.match(text, /only the aged photo/i);
-    assert.match(text, /not a with-care simulation/i);
-    assert.doesNotMatch(text, /applied/i);
-  });
-
-  it("names an empty credit balance and a missing face", () => {
-    assert.match(plainSimulateFailure("CreditInsufficiency", "The operation could not be completed"), /no credits/i);
-    assert.match(plainSimulateFailure("error_no_face", "No face detected on source image"), /could not find a face/i);
-  });
 });
