@@ -9,6 +9,7 @@ import { PHOTO_DEMO, PHOTO_LIVE } from "@/lib/copy";
 const LINES = [
   "The camera stays off until you tap it.",
   PHOTO_LIVE,
+  "We do not keep an account or a photo library.",
   PHOTO_DEMO,
 ];
 
@@ -17,64 +18,52 @@ export default function ConsentStep() {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div
-      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
-      style={{
-        paddingTop: "max(12px, env(safe-area-inset-top))",
-        paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-        paddingLeft: "max(20px, env(safe-area-inset-left))",
-        paddingRight: "max(20px, env(safe-area-inset-right))",
-      }}
-    >
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col">
-        <div
-          className="text-[10px] uppercase"
-          style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
-        >
-          A moment
-        </div>
-        <h1
-          className="mt-1"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: 32,
-            lineHeight: 1.05,
-            fontWeight: 400,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Before we begin
-        </h1>
+    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full min-h-dvh">
+      <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
+        A moment
+      </div>
+      <h1
+        className="mt-3"
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontSize: 36,
+          lineHeight: 1.1,
+          fontWeight: 400,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Before we begin
+      </h1>
 
-        <div className="mt-4 flex min-h-0 flex-1 flex-col justify-center">
-          {LINES.map((line, i) => (
-            <div key={line}>
-              <p
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  fontSize: 16,
-                  lineHeight: 1.35,
-                  fontWeight: 400,
-                  color: "#2A2826",
-                  textWrap: "pretty" as const,
-                }}
-              >
-                {line}
-              </p>
-              {i < LINES.length - 1 && (
-                <div className="my-3" style={{ width: 24, height: 1, background: "rgba(42,40,38,0.2)" }} />
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="mt-12 flex-1">
+        {LINES.map((line, i) => (
+          <div key={i}>
+            <p
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 17,
+                lineHeight: 1.5,
+                fontWeight: 400,
+                color: "#2A2826",
+                textWrap: "pretty" as const,
+              }}
+            >
+              {line}
+            </p>
+            {i < LINES.length - 1 && (
+              <div className="my-6 mx-auto" style={{ width: 24, height: 1, background: "rgba(42,40,38,0.2)" }} />
+            )}
+          </div>
+        ))}
+      </div>
 
+      <div className="mt-8">
         <button
           onClick={() => setChecked(!checked)}
-          className="mt-3 flex w-full items-center gap-3 text-left"
-          style={{ minHeight: 44 }}
+          className="flex items-center gap-3 w-full text-left"
         >
           <span
-            className="inline-flex items-center justify-center"
+            className="inline-flex items-center justify-center transition-colors"
             style={{
               width: 22,
               height: 22,
@@ -92,33 +81,35 @@ export default function ConsentStep() {
           </span>
           <span className="text-[14px]" style={{ color: "#2A2826" }}>I&apos;m ready</span>
         </button>
+      </div>
 
+      <div className="mt-4">
+        <NotMedicalAdvice />
         <div className="mt-2">
-          <NotMedicalAdvice />
-          <div className="mt-1">
-            <LegalLinks compact />
-          </div>
-          <Link
-            href="/privacy"
-            className="inline-block font-serif italic"
-            style={{
-              fontSize: 14,
-              color: "var(--mocha)",
-              borderBottom: "0.5px solid rgba(167,139,113,0.4)",
-              padding: "6px 0",
-              textDecoration: "none",
-            }}
-          >
-            Read what we keep
-          </Link>
+          <LegalLinks />
         </div>
+        <Link
+          href="/privacy"
+          className="inline-block font-serif italic mt-2"
+          style={{
+            fontSize: 14,
+            color: "var(--mocha)",
+            borderBottom: "0.5px solid rgba(167,139,113,0.4)",
+            padding: "12px 0",
+            textDecoration: "none",
+          }}
+        >
+          Read what we keep
+        </Link>
+      </div>
 
+      <div className="mt-6">
         <button
           disabled={!checked}
           onClick={() => setStep("capture")}
-          className="mt-3 w-full rounded-full font-medium"
+          className="w-full rounded-full font-medium transition-all"
           style={{
-            height: 52,
+            height: 56,
             fontSize: 15,
             letterSpacing: "0.02em",
             background: "#A78B71",
@@ -129,6 +120,12 @@ export default function ConsentStep() {
         >
           Continue
         </button>
+        <div
+          className="text-center mt-4 text-[10px] uppercase"
+          style={{ letterSpacing: "0.18em", color: "#6B5D52" }}
+        >
+          NOT A DOCTOR · YOU CAN STOP ANY TIME
+        </div>
       </div>
     </div>
   );

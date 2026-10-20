@@ -7,7 +7,6 @@ import type { SimulateResponse } from "@/app/api/simulate/route";
 import { applyLifestyleDeltas, withoutOverlayIntensities } from "@/lib/lifestyle-deltas";
 import { MONTH_CHOICES, simIntensitiesFor } from "@/lib/month-change";
 import { monthSuggestion, type Citation } from "@/lib/recommendations";
-import { QuietChoice } from "@/components/mirror/QuietChoice";
 import { plainSimulateFailure } from "@/lib/plain-errors";
 import { isSamplePhotoSource } from "@/lib/simulate-plan";
 
@@ -20,12 +19,12 @@ function CitationLinks({ citations }: { citations: Citation[] }) {
             href={cite.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block text-[12px]"
+            className="inline-block text-[13px]"
             style={{
               color: "#F5D4B8",
               textDecoration: "underline",
               textUnderlineOffset: 3,
-              padding: "2px 0",
+              padding: "8px 0",
             }}
           >
             {cite.label}
@@ -162,17 +161,10 @@ export default function SplitMirrorStep() {
   return (
     <div
       className="flex-1 flex flex-col w-full"
-      style={{
-        background: "#1a1612",
-        height: "100%",
-        minHeight: 0,
-        overflow: "hidden",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      style={{ background: "#1a1612", minHeight: "100dvh" }}
     >
       {/* Age scrubber */}
-      <div className="w-full shrink-0 px-5 pt-3">
+      <div className="px-6 pt-12 w-full">
         <div className="flex items-end justify-between">
           <div>
             <div
@@ -184,7 +176,7 @@ export default function SplitMirrorStep() {
             <div
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: 36,
+                fontSize: 44,
                 lineHeight: 1,
                 fontWeight: 300,
                 color: "#F8F5F0",
@@ -225,7 +217,7 @@ export default function SplitMirrorStep() {
       </div>
 
       {/* Split portrait */}
-      <div className="relative mt-2 min-h-0 w-full flex-1" style={{ overflow: "hidden" }}>
+      <div className="relative w-full mt-6" style={{ height: 400, overflow: "hidden" }}>
         {/* WITH CARE — left half */}
         <div className="absolute top-0 left-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
           {photo && (
@@ -351,7 +343,7 @@ export default function SplitMirrorStep() {
         </div>
       </div>
 
-      <div className="w-full shrink-0 px-5 pb-3 pt-3">
+      <div className="w-full px-6 pt-6 pb-8">
         <div
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)" }}
@@ -359,49 +351,69 @@ export default function SplitMirrorStep() {
           One change this month
         </div>
         <h2
-          className="mt-1"
+          className="mt-2"
           style={{
             fontFamily: "var(--font-serif)",
             fontWeight: 400,
-            fontSize: 22,
-            lineHeight: 1.1,
+            fontSize: 26,
+            lineHeight: 1.15,
             color: "#F8F5F0",
           }}
         >
           Which one feels possible?
         </h2>
 
-        <div className="mt-1">
-          {MONTH_CHOICES.map((choice) => (
-            <QuietChoice
-              key={choice.id}
-              label={choice.label}
-              selected={monthChange === choice.id}
-              onClick={() => setMonthChange(choice.id)}
-            />
-          ))}
+        <div className="mt-4 flex flex-col gap-3">
+          {MONTH_CHOICES.map((choice) => {
+            const selected = monthChange === choice.id;
+            return (
+              <button
+                key={choice.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setMonthChange(choice.id)}
+                className="w-full rounded-2xl text-left"
+                style={{
+                  minHeight: 56,
+                  padding: "14px 16px",
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 18,
+                  lineHeight: 1.25,
+                  background: selected ? "#F5D4B8" : "rgba(248,245,240,0.06)",
+                  color: selected ? "#2A2826" : "#F8F5F0",
+                  border: selected ? "1px solid #F5D4B8" : "1px solid rgba(248,245,240,0.18)",
+                }}
+              >
+                {choice.label}
+              </button>
+            );
+          })}
         </div>
 
         {suggestion && (
-          <div className="mt-3" style={{ borderTop: "1px solid rgba(248,245,240,0.12)", paddingTop: 8 }}>
+          <div
+            className="mt-4 rounded-2xl"
+            style={{
+              padding: "16px",
+              background: "rgba(248,245,240,0.06)",
+              border: "1px solid rgba(248,245,240,0.12)",
+            }}
+          >
             <div
               style={{
                 fontFamily: "var(--font-serif)",
                 fontStyle: "italic",
-                fontSize: 16,
+                fontSize: 18,
                 color: "#F5D4B8",
               }}
             >
               {suggestion.title}
             </div>
-            <p
-              className="mt-1 line-clamp-2 text-[13px] leading-snug"
-              style={{ color: "rgba(248,245,240,0.84)" }}
-            >
+            <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "rgba(248,245,240,0.84)" }}>
               {suggestion.body}
             </p>
             {suggestion.productType && (
-              <p className="mt-1 text-[12px]" style={{ color: "rgba(248,245,240,0.72)" }}>
+              <p className="mt-3 text-[13px]" style={{ color: "rgba(248,245,240,0.72)" }}>
                 Product: {suggestion.productType}
               </p>
             )}
@@ -412,7 +424,7 @@ export default function SplitMirrorStep() {
         {simError && (
           <p
             role="alert"
-            className="mt-2 line-clamp-2 text-[13px] leading-snug"
+            className="mt-5 text-[13px] leading-snug"
             style={{ color: "#F5D4B8", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
           >
             {simError}
@@ -420,7 +432,7 @@ export default function SplitMirrorStep() {
         )}
 
         <p
-          className="mt-2 line-clamp-2 text-[12px] leading-snug"
+          className="mt-6 text-[13px] leading-snug"
           style={{ color: "rgba(248,245,240,0.62)", fontFamily: "var(--font-serif)", fontStyle: "italic", minHeight: 20 }}
         >
           {simLoading
@@ -439,9 +451,9 @@ export default function SplitMirrorStep() {
         </p>
         <button
           onClick={() => setStep("insights")}
-          className="mt-2 w-full shrink-0 rounded-full font-medium"
+          className="mt-4 w-full rounded-full font-medium"
           style={{
-            height: 48,
+            height: 52,
             background: "rgba(248,245,240,0.92)",
             color: "#2A2826",
             fontSize: 15,

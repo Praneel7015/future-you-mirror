@@ -52,20 +52,12 @@ export default function SkinAgeRevealStep() {
   };
 
   return (
-    <div
-      className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col overflow-hidden"
-      style={{
-        paddingTop: "max(12px, env(safe-area-inset-top))",
-        paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-        paddingLeft: "max(20px, env(safe-area-inset-left))",
-        paddingRight: "max(20px, env(safe-area-inset-right))",
-      }}
-    >
+    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
       <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
         Your reading
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <div className="mt-10 grid grid-cols-2 gap-4">
         <div>
           <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.5)" }}>
             Real age
@@ -73,7 +65,7 @@ export default function SkinAgeRevealStep() {
           <div
             style={{
               fontFamily: "var(--font-serif)",
-              fontSize: 84,
+              fontSize: 110,
               lineHeight: 0.92,
               fontWeight: 300,
               letterSpacing: "-0.04em",
@@ -92,7 +84,7 @@ export default function SkinAgeRevealStep() {
           <div
             style={{
               fontFamily: "var(--font-serif)",
-              fontSize: 84,
+              fontSize: 110,
               lineHeight: 0.92,
               fontWeight: 300,
               letterSpacing: "-0.04em",
@@ -106,7 +98,7 @@ export default function SkinAgeRevealStep() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center">
+      <div className="mt-10 flex items-center">
         <div className="flex-1" style={{ height: 1, background: "rgba(42,40,38,0.12)" }} />
         <div
           className="mx-3"
@@ -124,10 +116,10 @@ export default function SkinAgeRevealStep() {
       </div>
 
       <p
-        className="mt-4"
+        className="mt-12"
         style={{
           fontFamily: "var(--font-serif)",
-          fontSize: 18,
+          fontSize: 21,
           lineHeight: 1.35,
           fontWeight: 400,
           textWrap: "pretty" as const,
@@ -142,7 +134,7 @@ export default function SkinAgeRevealStep() {
       <div className="flex-1" />
 
       {sliver && (
-        <div className="relative mb-3 mt-3 w-full overflow-hidden rounded-xl" style={{ height: 56 }}>
+        <div className="mb-6 relative w-full overflow-hidden rounded-xl" style={{ height: 80 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={sliver.url}
@@ -161,7 +153,7 @@ export default function SkinAgeRevealStep() {
         onClick={onContinue}
         className="w-full rounded-full font-medium"
         style={{
-          height: 52,
+          height: 56,
           fontSize: 15,
           letterSpacing: "0.02em",
           background: "#A78B71",

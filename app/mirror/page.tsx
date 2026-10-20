@@ -74,8 +74,8 @@ function MirrorFlow() {
 
   return (
     <main
-      className="h-dvh w-full overflow-hidden flex flex-col"
-      style={{ overscrollBehaviorY: "none" }}
+      className="min-h-dvh w-full flex flex-col"
+      style={{ overscrollBehaviorY: "contain" }}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -84,7 +84,7 @@ function MirrorFlow() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="h-dvh w-full overflow-hidden flex flex-col"
+          className="min-h-dvh w-full flex flex-col"
         >
           {step === "consent" && <ConsentStep />}
           {step === "capture" && <CaptureStep />}
