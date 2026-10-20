@@ -75,6 +75,15 @@ export function plainSimulateFailure(error?: string, message?: string): string {
   if (code === "demo_asset_missing") {
     return "The sample with-care photo is missing. Perfect Corp was not called.";
   }
+  if (code === "CreditInsufficiency" || /insufficient unit|no credits/i.test(detail)) {
+    return `Perfect Corp has no credits left for this photo. No with-care photo was made. ${left}`;
+  }
+  if (code === "error_no_face" || /no face/i.test(detail)) {
+    return `Perfect Corp could not find a face in that photo. No with-care photo was made. ${left}`;
+  }
+  if (code === "InvalidParameters" || code === "invalid_parameter" || code === "BadRequest") {
+    return `Perfect Corp rejected the simulation request. No with-care photo was made. ${left}`;
+  }
   if (detail) {
     return `No with-care photo was made. ${left} (${detail})`;
   }

@@ -46,6 +46,7 @@ function toApiParams(clamped: Omit<SkinSimParams, "sourceUrl">) {
 }
 
 function firstImageUrl(results: SkinSimResults): string | null {
+  // Documented success body is TaskStatusResponseBodySingleUrlResultsV2: `{ url }`.
   const direct = [results.url, results.image_url, results.output_url, results.download_url];
   for (const candidate of direct) {
     if (typeof candidate === "string" && candidate.startsWith("http")) return candidate;

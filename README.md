@@ -49,7 +49,7 @@ Set these on the server only. Never commit them, and never paste them into the r
 
 On Vercel: **Project → Settings → Environment Variables** for Preview and Production, then redeploy.
 
-If the key is missing or rejected, `/api/simulate` returns a JSON error and the split view says the with-care photo was **not** made. It does not pretend a filter is a simulation.
+If the key is missing, rejected, or out of credits (`CreditInsufficiency`), `/api/simulate` returns a JSON error and the split view says the with-care photo was **not** made. It does not pretend a filter is a simulation. A successful live simulation reads `results.url` from the task (the link is valid for about two hours).
 
 ### Refresh Perfect Corp credits
 

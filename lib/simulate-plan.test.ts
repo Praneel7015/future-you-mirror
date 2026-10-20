@@ -46,4 +46,9 @@ describe("simulate plan", () => {
     assert.match(text, /not a with-care simulation/i);
     assert.doesNotMatch(text, /applied/i);
   });
+
+  it("names an empty credit balance and a missing face", () => {
+    assert.match(plainSimulateFailure("CreditInsufficiency", "The operation could not be completed"), /no credits/i);
+    assert.match(plainSimulateFailure("error_no_face", "No face detected on source image"), /could not find a face/i);
+  });
 });
