@@ -3,6 +3,7 @@ import { processUpload, ImageError } from "@/lib/image-utils";
 import { analyzeSkin } from "@/lib/perfectcorp/skin-analysis";
 import { generateAging } from "@/lib/perfectcorp/aging";
 import { PerfectCorpError } from "@/lib/perfectcorp/client";
+import { plainMirrorError } from "@/lib/plain-errors";
 import type { SkinResult, AgingResult } from "@/lib/perfectcorp/types";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,12 @@ export async function POST(req: Request) {
     try {
       form = await req.formData();
     } catch (err) {
+      console.error("[analyze]", "invalid_body", (err as Error).message);
       return NextResponse.json(
-        { error: "invalid_body", message: `Could not read multipart form: ${(err as Error).message}` },
+        {
+          error: "invalid_body",
+          message: plainMirrorError({ code: "invalid_body", message: "Could not read the photo." }),
+        },
         { status: 400 },
       );
     }
@@ -35,7 +40,10 @@ export async function POST(req: Request) {
     const file = form.get("image");
     if (!(file instanceof File)) {
       return NextResponse.json(
-        { error: "missing_image", message: "Form field 'image' is required and must be a file." },
+        {
+          error: "missing_image",
+          message: plainMirrorError({ code: "missing_image", message: "A photo is required." }),
+        },
         { status: 400 },
       );
     }
@@ -46,7 +54,10 @@ export async function POST(req: Request) {
       processed = await processUpload(bytes, file.type);
     } catch (err) {
       if (err instanceof ImageError) {
-        return NextResponse.json({ error: err.code, message: err.message }, { status: 400 });
+        return NextResponse.json(
+          { error: err.code, message: plainMirrorError({ code: err.code, message: err.message }) },
+          { status: 400 },
+        );
       }
       throw err;
     }
@@ -72,13 +83,17 @@ export async function POST(req: Request) {
   } catch (err) {
     // Always return JSON — never let Next.js return an HTML error page
     if (err instanceof PerfectCorpError) {
+      console.error("[analyze]", err.code, err.message);
       return NextResponse.json(
-        { error: err.code, message: err.message, httpStatus: err.httpStatus, payload: err.payload },
+        { error: err.code, message: plainMirrorError({ code: err.code, message: err.message }) },
         { status: 502 },
       );
     }
     const message = err instanceof Error ? err.message : "Unexpected server error";
-    console.error("[analyze] unhandled error:", err);
-    return NextResponse.json({ error: "server_error", message }, { status: 500 });
+    console.error("[analyze]", message);
+    return NextResponse.json(
+      { error: "server_error", message: plainMirrorError({ code: "server_error", message }) },
+      { status: 500 },
+    );
   }
 }

@@ -7,7 +7,8 @@ import type { SimulateResponse } from "@/app/api/simulate/route";
 import { applyLifestyleDeltas, withoutOverlayIntensities } from "@/lib/lifestyle-deltas";
 import { MONTH_CHOICES, simIntensitiesFor } from "@/lib/month-change";
 import { monthSuggestion, type Citation } from "@/lib/recommendations";
-import { isSamplePhotoSource, plainSimulateFailure } from "@/lib/simulate-plan";
+import { plainSimulateFailure } from "@/lib/plain-errors";
+import { isSamplePhotoSource } from "@/lib/simulate-plan";
 
 function CitationLinks({ citations }: { citations: Citation[] }) {
   return (

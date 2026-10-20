@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { plainMirrorError } from "@/lib/plain-errors";
 import { useMirror } from "@/lib/store";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
 
@@ -52,6 +53,7 @@ export default function CaptureStep() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [statusText, setStatusText] = useState("Soft light. Look at the phone. Glasses off if you can.");
+  const [statusIsError, setStatusIsError] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -74,6 +76,7 @@ export default function CaptureStep() {
       fd.append("image", file);
 
       setProgress(0);
+      setStatusIsError(false);
       setStatusText("Sending your photo to Perfect Corp…");
 
       const fakeProgress = setInterval(() => {
@@ -100,6 +103,7 @@ export default function CaptureStep() {
             ? "Something went wrong with your photo. Please try again."
             : "The skin service isn't available right now. You can try the sample photo from the home page.";
           setError(msg);
+          setStatusIsError(true);
           setStatusText(msg);
           setProgress(null);
           setCameraState("idle");
@@ -107,14 +111,11 @@ export default function CaptureStep() {
         }
 
         if (!res.ok || !data || "error" in data) {
-          const raw =
-            data && "message" in data && data.message
-              ? data.message
-              : "We couldn't read this photo. Try again with your face in the light, looking at the phone.";
-          const msg = /Missing Perfect Corp env|auth failed/i.test(raw)
-            ? "This live reading can't run yet. The server still needs a Perfect Corp key. Try the sample photo on the home page."
-            : raw;
+          const code = data && "error" in data ? data.error : undefined;
+          const raw = data && "message" in data ? data.message : undefined;
+          const msg = plainMirrorError({ code, message: raw });
           setError(msg);
+          setStatusIsError(true);
           setStatusText(msg);
           setProgress(null);
           setCameraState("idle");
@@ -133,8 +134,11 @@ export default function CaptureStep() {
         setStep("morph");
       } catch (err) {
         clearInterval(fakeProgress);
-        const msg = err instanceof Error ? err.message : "Network issue — please try again.";
+        const msg = plainMirrorError({
+          message: err instanceof Error ? err.message : "Failed to fetch",
+        });
         setError(msg);
+        setStatusIsError(true);
         setStatusText(msg);
         setProgress(null);
         setCameraState("idle");
@@ -154,6 +158,7 @@ export default function CaptureStep() {
         await videoRef.current.play();
       }
       setCameraState("live");
+      setStatusIsError(false);
       setStatusText("Look straight at the phone. Then tap Take the photo.");
     } catch {
       // getUserMedia not available — fall back to file input
@@ -328,7 +333,23 @@ export default function CaptureStep() {
           </div>
         </div>
 
-        <div className="text-center text-[12px]" style={{ color: "rgba(248,245,240,0.55)" }}>
+        <div
+          className="text-center"
+          role={statusIsError ? "alert" : undefined}
+          style={
+            statusIsError
+              ? {
+                  fontFamily: "var(--font-serif)",
+                  fontStyle: "italic",
+                  fontSize: 16,
+                  lineHeight: 1.45,
+                  color: "#F5D4B8",
+                  maxWidth: 320,
+                  margin: "0 auto",
+                }
+              : { fontSize: 12, color: "rgba(248,245,240,0.55)" }
+          }
+        >
           {statusText}
         </div>
 
