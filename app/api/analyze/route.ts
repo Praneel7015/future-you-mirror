@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       processed = await processUpload(bytes, file.type);
     } catch (err) {
       if (err instanceof ImageError) {
+        console.error("[analyze]", err.code, err.message);
         return NextResponse.json(
           { error: err.code, message: plainMirrorError({ code: err.code, message: err.message }) },
           { status: 400 },
