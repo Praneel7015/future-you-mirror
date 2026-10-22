@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { plainMirrorError } from "@/lib/plain-errors";
 import { useMirror } from "@/lib/store";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
+import { mirrorSafeStyle } from "./MirrorFrame";
 
 type CameraState = "idle" | "live" | "captured";
 
@@ -247,7 +248,7 @@ export default function CaptureStep() {
         </div>
       )}
 
-      <div className="relative z-10 flex-1 flex flex-col px-6 pt-16 pb-12 w-full">
+      <div className="relative z-10 flex-1 flex flex-col px-6 w-full" style={mirrorSafeStyle}>
         <div
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)", fontStyle: "italic" }}
@@ -360,7 +361,7 @@ export default function CaptureStep() {
                 onClick={captureFrame}
                 className="flex-1 rounded-full font-medium"
                 style={{
-                  height: 52,
+                  height: 56,
                   background: "#F8F5F0",
                   color: "#2A2826",
                   fontSize: 14,
@@ -375,7 +376,7 @@ export default function CaptureStep() {
                 disabled={progress !== null}
                 className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
                 style={{
-                  height: 52,
+                  height: 56,
                   background: "#F8F5F0",
                   color: "#2A2826",
                   fontSize: 14,
@@ -396,7 +397,7 @@ export default function CaptureStep() {
                   disabled={progress !== null}
                   className="flex-1 rounded-full font-medium transition-all disabled:opacity-50"
                   style={{
-                    height: 52,
+                    height: 56,
                     background: "transparent",
                     color: "#F8F5F0",
                     border: "1px solid rgba(248,245,240,0.4)",

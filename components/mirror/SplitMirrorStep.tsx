@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMirror, findClosestPhoto } from "@/lib/store";
 import type { SimulateResponse } from "@/app/api/simulate/route";
-import { applyLifestyleDeltas, withoutOverlayIntensities } from "@/lib/lifestyle-deltas";
 import { MONTH_CHOICES, simIntensitiesFor } from "@/lib/month-change";
 import { monthSuggestion, type Citation } from "@/lib/recommendations";
 import { plainSimulateFailure } from "@/lib/plain-errors";
 import { isSamplePhotoSource } from "@/lib/simulate-plan";
+import { earlierTimelineAge } from "@/lib/stated-age";
 
 function CitationLinks({ citations }: { citations: Citation[] }) {
   return (
@@ -44,10 +44,6 @@ export default function SplitMirrorStep() {
   const scrubAge = useMirror((s) => s.scrubAge);
   const setScrubAge = useMirror((s) => s.setScrubAge);
 
-  const sun = useMirror((s) => s.sun);
-  const hyd = useMirror((s) => s.hyd);
-  const sleepVal = useMirror((s) => s.sleep);
-  const routine = useMirror((s) => s.routine);
   const monthChange = useMirror((s) => s.monthChange);
   const setMonthChange = useMirror((s) => s.setMonthChange);
 
@@ -65,6 +61,12 @@ export default function SplitMirrorStep() {
     return findClosestPhoto(result.aging.photos, scrubAge);
   }, [result, scrubAge]);
 
+  const earlier = useMemo(() => {
+    if (!result || !photo) return photo;
+    const target = earlierTimelineAge(scrubAge, result.aging.ageMin);
+    return findClosestPhoto(result.aging.photos, target) ?? photo;
+  }, [result, photo, scrubAge]);
+
   const photoUrl = photo?.url;
   if (photoUrl !== prevPhotoUrlRef.current) {
     prevPhotoUrlRef.current = photoUrl;
@@ -79,15 +81,16 @@ export default function SplitMirrorStep() {
   );
 
   const useBaked = Boolean(photo && (isDemo || isSamplePhotoSource(photo.url)));
+  const careSourceUrl = useBaked ? (earlier?.url ?? photo?.url) : photo?.url;
 
   useEffect(() => {
-    if (!photo) return;
+    if (!photo || !careSourceUrl) return;
     if (!useBaked && !simParams) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       return;
     }
 
-    const key = `${photo.url}|${useBaked ? "demo" : JSON.stringify(simParams)}`;
+    const key = `${careSourceUrl}|${useBaked ? "demo" : JSON.stringify(simParams)}`;
     if (key === lastSimKey.current) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -102,8 +105,8 @@ export default function SplitMirrorStep() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             useBaked || !simParams
-              ? { sourceUrl: photo.url, demo: true }
-              : { sourceUrl: photo.url, ...simParams },
+              ? { sourceUrl: careSourceUrl, demo: true }
+              : { sourceUrl: careSourceUrl, ...simParams },
           ),
         });
         if (gen !== requestGen.current) return;
@@ -130,18 +133,7 @@ export default function SplitMirrorStep() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [photo, simParams, useBaked]);
-
-  const ov = useMemo(() => {
-    if (!result) return { spots: 0.5, underEye: 0.5, texture: 0.5, dullness: 0.5, redness: 0.3 };
-    const adjusted = applyLifestyleDeltas(result.skin.concerns, {
-      sun,
-      hyd,
-      sleep: sleepVal,
-      routine,
-    });
-    return withoutOverlayIntensities(adjusted);
-  }, [result, sun, hyd, sleepVal, routine]);
+  }, [photo, careSourceUrl, simParams, useBaked]);
 
   const suggestion = monthChange ? monthSuggestion(monthChange) : null;
 
@@ -155,16 +147,20 @@ export default function SplitMirrorStep() {
     );
   }
 
-  const ageMin = Math.max(25, result.aging.ageMin);
+  const ageMin = result.aging.ageMin;
   const ageMax = result.aging.ageMax;
 
   return (
+    <div className="min-h-dvh w-full flex justify-center" style={{ background: "#1a1612" }}>
     <div
-      className="flex-1 flex flex-col w-full"
-      style={{ background: "#1a1612", minHeight: "100dvh" }}
+      className="flex-1 flex flex-col w-full max-w-[440px]"
+      style={{ minHeight: "100dvh" }}
     >
       {/* Age scrubber */}
-      <div className="px-6 pt-12 w-full">
+      <div
+        className="px-6 w-full"
+        style={{ paddingTop: "max(48px, env(safe-area-inset-top))" }}
+      >
         <div className="flex items-end justify-between">
           <div>
             <div
@@ -185,14 +181,8 @@ export default function SplitMirrorStep() {
               }}
             >
               {scrubAge}
-            </div>
           </div>
-          <div
-            className="text-[10px]"
-            style={{ color: "rgba(248,245,240,0.5)", fontStyle: "italic", letterSpacing: "0.06em" }}
-          >
-            drag to travel forward
-          </div>
+        </div>
         </div>
 
         <input
@@ -214,16 +204,28 @@ export default function SplitMirrorStep() {
           <span>{Math.round(ageMin + (2 * (ageMax - ageMin)) / 3)}</span>
           <span>{ageMax}</span>
         </div>
+        <p
+          className="mt-4"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 16,
+            lineHeight: 1.4,
+            color: "rgba(248,245,240,0.84)",
+          }}
+        >
+          Drag the line. The picture moves through the ages.
+        </p>
       </div>
 
       {/* Split portrait */}
-      <div className="relative w-full mt-6" style={{ height: 400, overflow: "hidden" }}>
+      <div className="relative w-full mt-6" style={{ height: 480, overflow: "hidden" }}>
         {/* WITH CARE — left half */}
         <div className="absolute top-0 left-0 bottom-0 overflow-hidden" style={{ width: "50%" }}>
           {photo && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={simUrl ?? photo.url}
+              src={simUrl ?? earlier?.url ?? photo.url}
               alt="With care"
               className="absolute object-cover"
               style={{
@@ -231,26 +233,15 @@ export default function SplitMirrorStep() {
                 height: "100%",
                 left: 0,
                 top: 0,
-                objectPosition: "center 25%",
-                filter: simUrl ? "brightness(1.04) saturate(1.08)" : "none",
-                transition: "filter 700ms ease, opacity 600ms ease",
+                objectPosition: "center 18%",
                 opacity: simLoading && !simUrl ? 0.7 : 1,
+                transition: "opacity 600ms ease",
               }}
             />
           )}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(80% 60% at 50% 35%, rgba(245,212,184,0.22), transparent 70%), linear-gradient(180deg, rgba(245,212,184,0.12) 0%, rgba(245,212,184,0.04) 100%)",
-              mixBlendMode: "soft-light",
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(26,22,18,0.6) 100%)",
-            }}
+            style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 72%, rgba(26,22,18,0.55) 100%)" }}
           />
           {simLoading && !simUrl && (
             <div
@@ -273,46 +264,13 @@ export default function SplitMirrorStep() {
                 height: "100%",
                 right: 0,
                 top: 0,
-                objectPosition: "center 25%",
-                filter: `brightness(${(0.96 - ov.dullness * 0.18).toFixed(3)}) contrast(${(1.02 + ov.texture * 0.10).toFixed(3)}) saturate(${(0.85 - ov.dullness * 0.28).toFixed(3)}) sepia(${(0.04 + ov.redness * 0.18).toFixed(3)})`,
-                transition: "filter 700ms ease",
+                objectPosition: "center 18%",
               }}
             />
           )}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{
-              background: `radial-gradient(60% 50% at 50% 40%, rgba(201,181,143,${(0.10 + ov.texture * 0.18).toFixed(3)}), transparent 70%), linear-gradient(180deg, rgba(201,181,143,${(0.14 + ov.dullness * 0.20).toFixed(3)}) 0%, rgba(74,66,52,${(0.18 + ov.texture * 0.20).toFixed(3)}) 100%)`,
-              mixBlendMode: "multiply",
-              transition: "background 700ms ease",
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 30% 38%, rgba(120,98,72,0.22) 0, transparent 1.4%)," +
-                "radial-gradient(circle at 62% 44%, rgba(120,98,72,0.18) 0, transparent 1.6%)," +
-                "radial-gradient(circle at 44% 58%, rgba(120,98,72,0.14) 0, transparent 1.2%)," +
-                "radial-gradient(circle at 70% 62%, rgba(120,98,72,0.18) 0, transparent 1.3%)",
-              mixBlendMode: "multiply",
-              opacity: 0.25 + ov.spots * 0.60,
-              transition: "opacity 700ms ease",
-            }}
-          />
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: "10%", right: "10%",
-              top: "32%", height: "12%",
-              background: `radial-gradient(ellipse at 50% 40%, rgba(60,44,30,${(ov.underEye * 0.38).toFixed(3)}) 0%, transparent 70%)`,
-              mixBlendMode: "multiply",
-              transition: "background 700ms ease",
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(26,22,18,0.6) 100%)" }}
+            style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 72%, rgba(26,22,18,0.55) 100%)" }}
           />
         </div>
 
@@ -343,7 +301,10 @@ export default function SplitMirrorStep() {
         </div>
       </div>
 
-      <div className="w-full px-6 pt-6 pb-8">
+      <div
+        className="w-full px-6 pt-6"
+        style={{ paddingBottom: "max(32px, calc(env(safe-area-inset-bottom) + 24px))" }}
+      >
         <div
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.55)" }}
@@ -441,19 +402,17 @@ export default function SplitMirrorStep() {
               : "Making the with-care photo…"
             : simError
               ? "Simulation did not run."
-              : simMode === "demo"
-                ? "Sample photo. Perfect Corp was not called."
-                : simMode === "live"
-                  ? "With-care photo from Perfect Corp."
-                  : useBaked
-                    ? ""
-                    : "Pick one change. Then we ask Perfect Corp for the with-care photo."}
+              : simMode === "live" && simUrl
+                ? "With care is the picture Perfect Corp made. Without is this age."
+                : earlier?.url === photo?.url
+                  ? "This is the earliest picture on the timeline."
+                  : "With care is an earlier picture on this timeline. Without is this age."}
         </p>
         <button
           onClick={() => setStep("insights")}
           className="mt-4 w-full rounded-full font-medium"
           style={{
-            height: 52,
+            height: 56,
             background: "rgba(248,245,240,0.92)",
             color: "#2A2826",
             fontSize: 15,
@@ -463,6 +422,7 @@ export default function SplitMirrorStep() {
           See your insights
         </button>
       </div>
+    </div>
     </div>
   );
 }

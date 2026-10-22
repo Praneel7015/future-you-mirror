@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMirror } from "@/lib/store";
 import type { AnalyzeResponse } from "@/app/api/analyze/route";
 
 import ConsentStep from "@/components/mirror/ConsentStep";
+import AgeStep from "@/components/mirror/AgeStep";
 import CaptureStep from "@/components/mirror/CaptureStep";
 import LoadingStep from "@/components/mirror/LoadingStep";
 import MorphStep from "@/components/mirror/MorphStep";
@@ -23,11 +24,17 @@ function MirrorFlow() {
   const setStep = useMirror((s) => s.setStep);
   const setResult = useMirror((s) => s.setResult);
   const setError = useMirror((s) => s.setError);
+  const reset = useMirror((s) => s.reset);
+
+  useLayoutEffect(() => {
+    if (!isDemo) return;
+    reset();
+    setStep("age");
+  }, [isDemo, reset, setStep]);
 
   useEffect(() => {
-    if (!isDemo) return;
+    if (!isDemo || step !== "loading") return;
     let cancelled = false;
-    setStep("loading");
 
     const preload = (url: string) =>
       new Promise<void>((resolve) => {
@@ -63,14 +70,14 @@ function MirrorFlow() {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Could not load sample";
         setError(msg);
-        setStep("capture");
+        setStep("age");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [isDemo, setStep, setResult, setError]);
+  }, [isDemo, step, setStep, setResult, setError]);
 
   return (
     <main
@@ -87,6 +94,7 @@ function MirrorFlow() {
           className="min-h-dvh w-full flex flex-col"
         >
           {step === "consent" && <ConsentStep />}
+          {step === "age" && <AgeStep />}
           {step === "capture" && <CaptureStep />}
           {step === "loading" && <LoadingStep />}
           {step === "morph" && <MorphStep />}

@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { findClosestPhoto, useMirror } from "@/lib/store";
 import type { SdConcern } from "@/lib/perfectcorp/types";
-import { applyLifestyleDeltas } from "@/lib/lifestyle-deltas";
-import { compositeSkinScore } from "@/lib/skin-score";
+import { checksByScore, readingScore } from "@/lib/skin-score";
 import {
   CONCERN_NAME,
   RECOMMENDATIONS,
+  everydayPlate,
   foodNoteFor,
   type Citation,
 } from "@/lib/recommendations";
 import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
 import SkinScoreRing from "./SkinScoreRing";
+import { MirrorFrame } from "./MirrorFrame";
 
 function CitationList({ citations }: { citations: Citation[] }) {
   return (
@@ -55,28 +56,21 @@ function uniqueCitations(groups: Citation[][]): Citation[] {
 export default function InsightsStep() {
   const result = useMirror((s) => s.result);
   const setStep = useMirror((s) => s.setStep);
-  const sun = useMirror((s) => s.sun);
-  const hyd = useMirror((s) => s.hyd);
-  const sleep = useMirror((s) => s.sleep);
-  const routine = useMirror((s) => s.routine);
+  const statedAge = useMirror((s) => s.statedAge);
   const [picked, setPicked] = useState<SdConcern | null>(null);
 
   if (!result) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
+      <MirrorFrame className="items-center justify-center">
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
           No reading yet.
         </div>
-      </div>
+      </MirrorFrame>
     );
   }
 
-  const sliders = { sun, hyd, sleep, routine };
-  const score = compositeSkinScore(result.skin.concerns, sliders);
-  const adjusted = applyLifestyleDeltas(result.skin.concerns, sliders);
-  const ranked = (Object.keys(result.skin.concerns) as SdConcern[])
-    .map((key) => ({ key, ui: Math.round(adjusted[key] ?? result.skin.concerns[key].ui) }))
-    .sort((a, b) => a.ui - b.ui);
+  const score = readingScore(result.skin);
+  const ranked = checksByScore(result.skin.concerns);
   const chips = ranked.slice(0, 3);
   const topKey = chips[0]?.key;
   const selected =
@@ -84,12 +78,14 @@ export default function InsightsStep() {
   const selectedScore = chips.find((chip) => chip.key === selected);
   const rec = selected ? RECOMMENDATIONS[selected] : null;
   const food = selected ? foodNoteFor(selected) : null;
+  const plate = everydayPlate();
   const maskUrl = selected ? result.skin.concerns[selected].maskUrls?.[0] : undefined;
-  const agingFace = findClosestPhoto(result.aging.photos, result.aging.currentAge ?? 30)?.url;
+  const agingFace =
+    statedAge == null ? undefined : findClosestPhoto(result.aging.photos, statedAge)?.url;
   const faceSrc = maskUrl && result.skin.resizedImageUrl ? result.skin.resizedImageUrl : agingFace;
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
+    <MirrorFrame>
       <div
         className="text-[10px] uppercase"
         style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}
@@ -115,7 +111,7 @@ export default function InsightsStep() {
       <div
         className="relative mt-5 overflow-hidden"
         style={{
-          height: 440,
+          height: 360,
           borderRadius: 24,
           background: "#E7DDD2",
         }}
@@ -147,13 +143,9 @@ export default function InsightsStep() {
             }}
           />
         )}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: "linear-gradient(180deg, rgba(26,22,18,0) 46%, rgba(26,22,18,0.55) 100%)",
-          }}
-        />
-        <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2">
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2">
           {chips.map((chip) => {
             const on = chip.key === selected;
             const isTop = chip.key === topKey;
@@ -169,8 +161,9 @@ export default function InsightsStep() {
                   padding: "10px 16px",
                   fontFamily: "var(--font-serif)",
                   fontSize: 17,
-                  background: on ? "#FBF8F3" : "rgba(251,248,243,0.88)",
+                  background: on ? "#FFFFFF" : "transparent",
                   color: "#2A2826",
+                  border: "1px solid rgba(42,40,38,0.16)",
                   boxShadow: isTop ? "0 0 0 2px #F5D4B8" : "none",
                 }}
               >
@@ -178,7 +171,6 @@ export default function InsightsStep() {
               </button>
             );
           })}
-        </div>
       </div>
 
       {rec && food && selectedScore && (
@@ -213,8 +205,37 @@ export default function InsightsStep() {
         </article>
       )}
 
+      <article
+        className="mt-4 bg-white rounded-2xl"
+        style={{
+          padding: "16px",
+          border: "1px solid rgba(42,40,38,0.06)",
+          boxShadow: "0 1px 2px rgba(42,40,38,0.03)",
+        }}
+      >
+        <h2
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 22,
+            fontWeight: 400,
+            lineHeight: 1.2,
+          }}
+        >
+          {plate.title}
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(42,40,38,0.78)" }}>
+          {plate.body}
+        </p>
+        <CitationList citations={plate.citations} />
+      </article>
+
       <div className="mt-8 flex justify-center">
-        <SkinScoreRing score={score} betterThan={Math.round(score)} size={148} />
+        <SkinScoreRing
+          score={score}
+          lowestName={ranked[0] ? CONCERN_NAME[ranked[0].key] : undefined}
+          lowestScore={ranked[0]?.ui}
+          size={148}
+        />
       </div>
 
       <div className="mt-8">
@@ -245,6 +266,6 @@ export default function InsightsStep() {
           <LegalLinks />
         </div>
       </div>
-    </div>
+    </MirrorFrame>
   );
 }

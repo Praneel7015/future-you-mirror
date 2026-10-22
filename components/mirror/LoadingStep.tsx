@@ -77,7 +77,10 @@ export default function LoadingStep() {
         </div>
       </div>
 
-      <div className="pb-16 text-center">
+      <div
+        className="text-center"
+        style={{ paddingBottom: "max(64px, calc(env(safe-area-inset-bottom) + 24px))" }}
+      >
         <span
           className="text-[10px] uppercase"
           style={{ letterSpacing: "0.28em", color: "rgba(248,245,240,0.4)" }}

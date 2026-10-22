@@ -14,6 +14,16 @@ export const runtime = "edge";
 /** Avoid giant data: URIs in Satori — keeps Edge render stable; OG may fetch the HTTPS URL. */
 const MAX_SHARE_CARD_INLINE_BYTES = 2_400_000;
 
+function bytesToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + step));
+  }
+  return btoa(binary);
+}
+
 async function inlineImage(url: string, requestOrigin: string): Promise<string | null> {
   if (!url) return null;
   const trimmed = url.trim();
@@ -36,7 +46,7 @@ async function inlineImage(url: string, requestOrigin: string): Promise<string |
     if (buf.byteLength > MAX_SHARE_CARD_INLINE_BYTES) {
       return abs;
     }
-    const b64 = Buffer.from(buf).toString("base64");
+    const b64 = bytesToBase64(buf);
     return `data:${ct};base64,${b64}`;
   } catch {
     return null;

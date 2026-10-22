@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMirror, findClosestPhoto } from "@/lib/store";
+import { futurePortrait } from "@/lib/stated-age";
 
 /** Full morph dwell time before advancing to reveal. */
 const TOTAL_MS = 3400;
@@ -10,6 +11,7 @@ const FADE_MS = 2300;
 
 export default function MorphStep() {
   const result = useMirror((s) => s.result);
+  const statedAge = useMirror((s) => s.statedAge);
   const setStep = useMirror((s) => s.setStep);
 
   const [t, setT] = useState(0);
@@ -34,21 +36,19 @@ export default function MorphStep() {
     };
   }, [setStep]);
 
-  const realAge = result?.aging.currentAge ?? 30;
   const ageMin = result?.aging.ageMin ?? 12;
   const ageMax = result?.aging.ageMax ?? 70;
-  /** Preview “+30 years” face for this step (does not mutate scrub slider until reveal continues). */
-  const futureAge = Math.min(ageMax, Math.max(ageMin, Math.round(realAge + 30)));
+  const portrait =
+    statedAge == null ? null : futurePortrait(statedAge, ageMin, ageMax);
+  const futureAge = portrait?.future ?? ageMax;
   const photos = result?.aging.photos ?? [];
-  const nowPhoto = findClosestPhoto(photos, realAge);
-  const futurePhoto = findClosestPhoto(photos, futureAge);
+  const nowPhoto = statedAge == null ? null : findClosestPhoto(photos, statedAge);
+  const futurePhoto = portrait ? findClosestPhoto(photos, portrait.future) : null;
 
   const captionAt = t < 0.33 ? 0 : t < 0.66 ? 1 : 2;
-  const captions = [
-    "This is now.",
-    "Thirty years pass.",
-    "This is what they leave.",
-  ];
+  const captions = portrait?.limited
+    ? ["This is now.", "As far as the pictures go.", "This is what they leave."]
+    : ["This is now.", "Thirty years pass.", "This is what they leave."];
 
   // Approximate ellipse perimeter (Ramanujan's approximation)
   const rx = 130;
@@ -66,7 +66,7 @@ export default function MorphStep() {
       }}
     >
       {/* eyebrow crossfade */}
-      <div className="absolute left-0 right-0 text-center" style={{ top: 100 }}>
+      <div className="absolute left-0 right-0 text-center" style={{ top: "max(24px, env(safe-area-inset-top))" }}>
         <div className="relative" style={{ height: 14 }}>
           <div
             className="absolute inset-0 text-[10px] uppercase"
@@ -173,7 +173,12 @@ export default function MorphStep() {
       {/* captions */}
       <div
         className="absolute text-center"
-        style={{ top: 532, left: 24, right: 24, height: 28 }}
+        style={{
+          bottom: "max(28px, calc(env(safe-area-inset-bottom) + 16px))",
+          left: 24,
+          right: 24,
+          height: 28,
+        }}
       >
         {captions.map((c, i) => (
           <div

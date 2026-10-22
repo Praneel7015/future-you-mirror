@@ -1,30 +1,10 @@
 import type { SdConcern } from "./perfectcorp/types";
-import { applyLifestyleDeltas } from "./lifestyle-deltas";
 
-type SliderState = { sun: number; hyd: number; sleep: number; routine: number };
-
-/**
- * Composite "skin score" 0–100. Higher = better.
- *
- * Perfect Corp's `ui_score` for each concern is already 0–100 with higher
- * meaning healthier (e.g. higher moisture score = more hydrated). We average
- * across the 14 concerns after applying lifestyle deltas, so the displayed
- * number reflects the user's actual habits.
- */
-export function compositeSkinScore(
-  concerns: Partial<Record<SdConcern, { raw: number; ui: number }>>,
-  sliders: SliderState,
-): number {
-  const adjusted = applyLifestyleDeltas(concerns, sliders);
-  const values = Object.values(adjusted);
-  if (values.length === 0) return 50;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  return Math.max(0, Math.min(100, mean));
-}
+type ConcernMap = Partial<Record<SdConcern, { ui: number }>>;
 
 /**
  * The most-improvable concern — used as the "your one thing" keyword on
- * the share card and as the climate-card anchor. Returns a friendly word.
+ * the share card. Lowest ui score. Higher ui means healthier.
  */
 const CONCERN_WORD: Record<SdConcern, string> = {
   moisture: "hydration",
@@ -43,14 +23,34 @@ const CONCERN_WORD: Record<SdConcern, string> = {
   droopy_lower_eyelid: "structure",
 };
 
-export function topConcernWord(
-  concerns: Partial<Record<SdConcern, { raw: number; ui: number }>>,
-  sliders: SliderState,
-): string {
-  const adjusted = applyLifestyleDeltas(concerns, sliders);
-  const entries = Object.entries(adjusted) as [SdConcern, number][];
-  if (entries.length === 0) return "balance";
-  entries.sort((a, b) => a[1] - b[1]);
-  const [worstKey] = entries[0];
-  return CONCERN_WORD[worstKey] ?? "balance";
+/** Plain average of the check scores. No habit sliders. */
+export function meanConcernScore(concerns: ConcernMap): number | null {
+  const values = Object.values(concerns)
+    .map((item) => item?.ui)
+    .filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+  if (values.length === 0) return null;
+  const mean = values.reduce((sum, n) => sum + n, 0) / values.length;
+  return Math.max(0, Math.min(100, mean));
+}
+
+/** Perfect Corp overall score, or the plain average when that field is missing. */
+export function readingScore(skin: { overallScore: number | null; concerns: ConcernMap }): number {
+  if (skin.overallScore != null && Number.isFinite(skin.overallScore)) {
+    return Math.max(0, Math.min(100, skin.overallScore));
+  }
+  return meanConcernScore(skin.concerns) ?? 0;
+}
+
+/** Lowest ui score first. Higher ui means healthier. */
+export function checksByScore(concerns: ConcernMap): { key: SdConcern; ui: number }[] {
+  return (Object.keys(concerns) as SdConcern[])
+    .filter((key) => typeof concerns[key]?.ui === "number")
+    .map((key) => ({ key, ui: Math.round(concerns[key]!.ui) }))
+    .sort((a, b) => a.ui - b.ui);
+}
+
+export function lowestConcernWord(concerns: ConcernMap): string {
+  const lowest = checksByScore(concerns)[0];
+  if (!lowest) return "balance";
+  return CONCERN_WORD[lowest.key] ?? "balance";
 }

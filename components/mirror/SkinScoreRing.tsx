@@ -16,11 +16,12 @@ export function bandFor(score: number) {
 
 interface Props {
   score: number;
-  betterThan: number;
+  lowestName?: string;
+  lowestScore?: number;
   size?: number;
 }
 
-export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) {
+export default function SkinScoreRing({ score, lowestName, lowestScore, size = 200 }: Props) {
   const r = size * 0.45;
   const cx = size / 2;
   const cy = size / 2;
@@ -93,16 +94,31 @@ export default function SkinScoreRing({ score, betterThan, size = 200 }: Props) 
         {band.name}
       </div>
 
-      <div
-        className="mt-2 text-[12px] uppercase"
+      <p
+        className="mt-3 text-center"
         style={{
-          letterSpacing: "0.32em",
-          color: "rgba(42,40,38,0.55)",
-          fontVariantNumeric: "tabular-nums",
+          fontFamily: "var(--font-serif)",
+          fontSize: 14,
+          lineHeight: 1.45,
+          color: "#6B5D52",
+          maxWidth: 260,
         }}
       >
-        BETTER THAN {Math.round(betterThan)}% OF READINGS
-      </div>
+        Average of the 14 checks. Higher means healthier on this reading.
+      </p>
+      {lowestName != null && lowestScore != null && (
+        <p
+          className="mt-2 text-center"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 16,
+            color: "#2A2826",
+          }}
+        >
+          Lowest: {lowestName}, {lowestScore}.
+        </p>
+      )}
     </div>
   );
 }
