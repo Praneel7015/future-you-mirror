@@ -1,6 +1,8 @@
 "use client";
 
 import { useMirror, findClosestPhoto } from "@/lib/store";
+import { futurePortrait } from "@/lib/stated-age";
+import { MirrorFrame } from "./MirrorFrame";
 
 function gapPhrase(gap: number) {
   const abs = Math.abs(gap);
@@ -23,36 +25,34 @@ function gapPhrase(gap: number) {
 
 export default function SkinAgeRevealStep() {
   const result = useMirror((s) => s.result);
+  const statedAge = useMirror((s) => s.statedAge);
   const setStep = useMirror((s) => s.setStep);
   const setScrubAge = useMirror((s) => s.setScrubAge);
 
-  if (!result) {
+  if (!result || statedAge == null) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
+      <MirrorFrame className="items-center justify-center">
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
           No reading yet.
         </div>
-      </div>
+      </MirrorFrame>
     );
   }
 
-  const realAge = result.aging.currentAge ?? 30;
-  const skinAge = result.skin.skinAge ?? realAge;
-  const gap = skinAge - realAge;
+  const skinAge = result.skin.skinAge ?? statedAge;
+  const gap = skinAge - statedAge;
   const { headline, sentence } = gapPhrase(gap);
+  const portrait = futurePortrait(statedAge, result.aging.ageMin, result.aging.ageMax);
 
-  const sliver = findClosestPhoto(result.aging.photos, realAge);
+  const sliver = findClosestPhoto(result.aging.photos, statedAge);
 
   const onContinue = () => {
-    // Align split scrubber with morph preview (+30 years, clamped to API range)
-    const desired = Math.round(realAge + 30);
-    const target = Math.max(result.aging.ageMin, Math.min(result.aging.ageMax, desired));
-    setScrubAge(target);
+    setScrubAge(portrait.future);
     setStep("split");
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
+    <MirrorFrame>
       <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
         Your reading
       </div>
@@ -60,7 +60,7 @@ export default function SkinAgeRevealStep() {
       <div className="mt-10 grid grid-cols-2 gap-4">
         <div>
           <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.5)" }}>
-            Real age
+            Your age
           </div>
           <div
             style={{
@@ -74,7 +74,7 @@ export default function SkinAgeRevealStep() {
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {realAge}
+            {statedAge}
           </div>
         </div>
         <div className="text-right">
@@ -130,6 +130,20 @@ export default function SkinAgeRevealStep() {
           Here&apos;s what that looks like — and how to close the gap.
         </span>
       </p>
+      {portrait.sentence && (
+        <p
+          className="mt-4"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 16,
+            lineHeight: 1.4,
+            color: "#6B5D52",
+          }}
+        >
+          {portrait.sentence}
+        </p>
+      )}
 
       <div className="flex-1" />
 
@@ -162,6 +176,6 @@ export default function SkinAgeRevealStep() {
       >
         See your trajectory
       </button>
-    </div>
+    </MirrorFrame>
   );
 }

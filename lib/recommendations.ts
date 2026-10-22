@@ -67,13 +67,6 @@ const NIAMS_ACNE: Citation = {
 
 const EXAMPLE_NOTE = "Example only. Not an endorsement, not an ad, and not a checkout.";
 
-const SALICYLIC_CLEANSER: ExampleProduct = {
-  name: "Neutrogena Oil-Free Acne Wash",
-  productType: "Salicylic-acid cleanser (2%)",
-  href: "https://www.neutrogena.com/products/skincare/oil-free-acne-wash-with-salicylic-acid/6801710XX.html",
-  note: EXAMPLE_NOTE,
-};
-
 const ADAPALENE_GEL: ExampleProduct = {
   name: "Differin Gel",
   productType: "Adapalene gel (0.1% retinoid)",
@@ -93,7 +86,7 @@ export const RECOMMENDATIONS: Record<SdConcern, ConcernRecommendation> = {
     finding: (score) => scoreLine("Acne", score),
     action:
       "A salicylic-acid cleanser can help open clogged pores. It is used for whiteheads and pimples. A dermatologist can help you choose what to use.",
-    example: SALICYLIC_CLEANSER,
+    example: null,
     citations: [AAD_TREAT, NIAMS_ACNE],
   },
   pore: {
@@ -103,7 +96,7 @@ export const RECOMMENDATIONS: Record<SdConcern, ConcernRecommendation> = {
     finding: (score) => scoreLine("Pore", score),
     action:
       "Salicylic acid is used to open clogged pores. It does not promise smaller pores. Wash gently. Don't scrub.",
-    example: SALICYLIC_CLEANSER,
+    example: null,
     citations: [AAD_TREAT, AAD_TIPS],
   },
   texture: {
@@ -302,6 +295,15 @@ export function foodNoteFor(concern: SdConcern): { body: string; citations: Cita
     return { body: DIET_INTRO, citations: DIET_INTRO_CITATIONS };
   }
   return { body: FOOD_SCOPE, citations: DIET_INTRO_CITATIONS };
+}
+
+/** Everyday food, cited from the acne-diet note. Not a treatment for the photo. */
+export function everydayPlate(): { title: string; body: string; citations: Citation[] } {
+  return {
+    title: "On the plate",
+    body: "Vegetables, beans, and some fruit raise blood sugar more slowly than sugary drinks. Carrots are one of those vegetables. This is everyday food, not a treatment, and not a meal plan.",
+    citations: [AAD_DIET],
+  };
 }
 
 export type MonthSuggestion = {

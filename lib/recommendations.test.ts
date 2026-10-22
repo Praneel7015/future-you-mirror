@@ -8,6 +8,7 @@ import {
   RECOMMENDATIONS,
   dietContext,
   dietScoreSentence,
+  everydayPlate,
   foodNoteFor,
   monthSuggestion,
 } from "./recommendations.ts";
@@ -32,7 +33,6 @@ const CONCERNS = [
 const ALLOWED_HOSTS = new Set([
   "www.aad.org",
   "www.niams.nih.gov",
-  "www.neutrogena.com",
   "differin.com",
 ]);
 
@@ -91,6 +91,12 @@ describe("recommendations", () => {
     assert.match(lid.body, /not a diet/i);
     assert.match(lid.body, /not your fault/i);
     for (const cite of lid.citations) assertCitation(cite.href);
+
+    const plate = everydayPlate();
+    assert.match(plate.body, /carrots/i);
+    assert.match(plate.body, /not a treatment/i);
+    assert.doesNotMatch(plate.body, /you should cut|detox|guilty|lose weight/i);
+    for (const cite of plate.citations) assertCitation(cite.href);
   });
 
   it("reveals the matching suggestion for each monthly choice", () => {

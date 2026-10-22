@@ -4,6 +4,7 @@ import type { MonthChangeId } from "@/lib/month-change";
 
 export type MirrorStep =
   | "consent"
+  | "age"
   | "capture"
   | "loading"
   | "morph"
@@ -23,6 +24,7 @@ interface MirrorState {
   routine: number;
 
   scrubAge: number;
+  statedAge: number | null;
   monthChange: MonthChangeId | null;
 
   setStep: (step: MirrorStep) => void;
@@ -33,6 +35,7 @@ interface MirrorState {
   setSleep: (v: number) => void;
   setRoutine: (v: number) => void;
   setScrubAge: (v: number) => void;
+  setStatedAge: (age: number) => void;
   setMonthChange: (monthChange: MonthChangeId) => void;
   reset: () => void;
 }
@@ -46,6 +49,7 @@ const initial = {
   sleep: 55,
   routine: 82,
   scrubAge: 45,
+  statedAge: null as number | null,
   monthChange: null as MonthChangeId | null,
 };
 
@@ -59,6 +63,7 @@ export const useMirror = create<MirrorState>((set) => ({
   setSleep: (sleep) => set({ sleep }),
   setRoutine: (routine) => set({ routine }),
   setScrubAge: (scrubAge) => set({ scrubAge }),
+  setStatedAge: (statedAge) => set({ statedAge }),
   setMonthChange: (monthChange) => set({ monthChange }),
   reset: () => set(initial),
 }));

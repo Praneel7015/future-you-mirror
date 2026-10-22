@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMirror } from "@/lib/store";
-import { LegalLinks, NotMedicalAdvice } from "@/components/LegalNote";
+import { NotMedicalAdvice } from "@/components/LegalNote";
 import { PHOTO_DEMO, PHOTO_LIVE } from "@/lib/copy";
+import { MirrorFrame } from "./MirrorFrame";
 
 const LINES = [
   "The camera stays off until you tap it.",
   PHOTO_LIVE,
-  "We do not keep an account or a photo library.",
   PHOTO_DEMO,
 ];
 
@@ -18,7 +18,7 @@ export default function ConsentStep() {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full min-h-dvh">
+    <MirrorFrame>
       <div className="text-[10px] uppercase" style={{ letterSpacing: "0.28em", color: "rgba(42,40,38,0.55)", fontStyle: "italic" }}>
         A moment
       </div>
@@ -85,28 +85,40 @@ export default function ConsentStep() {
 
       <div className="mt-4">
         <NotMedicalAdvice />
-        <div className="mt-2">
-          <LegalLinks />
+        <div className="mt-2 flex items-center justify-center gap-8">
+          <Link
+            href="/privacy"
+            className="inline-block font-serif italic"
+            style={{
+              fontSize: 14,
+              color: "var(--mocha)",
+              borderBottom: "0.5px solid rgba(167,139,113,0.4)",
+              padding: "12px 0",
+              textDecoration: "none",
+            }}
+          >
+            Read what we keep
+          </Link>
+          <Link
+            href="/terms"
+            className="inline-block font-serif italic"
+            style={{
+              fontSize: 14,
+              color: "var(--mocha)",
+              borderBottom: "0.5px solid rgba(167,139,113,0.4)",
+              padding: "12px 0",
+              textDecoration: "none",
+            }}
+          >
+            Terms
+          </Link>
         </div>
-        <Link
-          href="/privacy"
-          className="inline-block font-serif italic mt-2"
-          style={{
-            fontSize: 14,
-            color: "var(--mocha)",
-            borderBottom: "0.5px solid rgba(167,139,113,0.4)",
-            padding: "12px 0",
-            textDecoration: "none",
-          }}
-        >
-          Read what we keep
-        </Link>
       </div>
 
       <div className="mt-6">
         <button
           disabled={!checked}
-          onClick={() => setStep("capture")}
+          onClick={() => setStep("age")}
           className="w-full rounded-full font-medium transition-all"
           style={{
             height: 56,
@@ -127,6 +139,6 @@ export default function ConsentStep() {
           NOT A DOCTOR · YOU CAN STOP ANY TIME
         </div>
       </div>
-    </div>
+    </MirrorFrame>
   );
 }

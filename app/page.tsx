@@ -1,12 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { LegalLinks } from "@/components/LegalNote";
 
 const EASE_MIRROR = [0.4, 0, 0.2, 1] as const;
 const TAP_MS = 0.12;
+
+function iosHomeHintSnapshot() {
+  const ua = navigator.userAgent;
+  const iphone = /iPhone/.test(ua);
+  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true);
+  return iphone && safari && !standalone;
+}
 
 const MotionLink = motion(Link);
 
@@ -32,6 +43,11 @@ function tapOutlineSecondary() {
 export default function LandingPage() {
   const reduced = useReducedMotion();
   const [narrowMobile, setNarrowMobile] = useState(false);
+  const iosHomeHint = useSyncExternalStore(
+    () => () => {},
+    iosHomeHintSnapshot,
+    () => false,
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 640px)");
@@ -246,6 +262,17 @@ export default function LandingPage() {
         <motion.div className="mt-4" variants={fadeUp} transition={easeUp}>
           <LegalLinks />
         </motion.div>
+
+        {iosHomeHint && (
+          <motion.p
+            className="mt-4 text-center text-[13px]"
+            style={{ color: "#6B5D52", fontFamily: "var(--font-serif)", fontStyle: "italic" }}
+            variants={fadeUp}
+            transition={easeUp}
+          >
+            To keep it on your phone: tap Share, then Add to Home Screen.
+          </motion.p>
+        )}
 
         <motion.div className="mt-2 text-center" variants={fadeUp} transition={easeUp}>
           <a

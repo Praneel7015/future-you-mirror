@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useMirror, findClosestPhoto } from "@/lib/store";
-import { compositeSkinScore, topConcernWord } from "@/lib/skin-score";
+import { futurePortrait } from "@/lib/stated-age";
+import { lowestConcernWord, readingScore } from "@/lib/skin-score";
 import {
   SHARE_CARD_H,
   SHARE_CARD_SITE_LINE,
@@ -10,47 +11,28 @@ import {
   shareCardLayout,
   scaleSharePx,
 } from "@/lib/share-card-spec";
+import { MirrorFrame } from "./MirrorFrame";
 
-const SaveIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 18 18"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.25"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9 2v10" />
-    <path d="M5 8.5l4 4 4-4" />
-    <path d="M3 14v1.5h12V14" />
-  </svg>
-);
+function subscribeShare() {
+  return () => {};
+}
 
-const LinkIcon = () => (
-  <svg
-    width={18}
-    height={18}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.75}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" />
-    <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" />
-  </svg>
-);
+const HOLD_TO_SAVE = "Press and hold the picture, then tap Save to Photos.";
 
-const StoryIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="2.5" width="10" height="13" rx="2" />
-    <circle cx="9" cy="6" r="0.5" fill="currentColor" />
-  </svg>
-);
+function phoneCanShareFile() {
+  return navigator.maxTouchPoints > 0 && typeof navigator.share === "function";
+}
+
+function downloadPng(blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "future-you-mirror.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 type ShareCardPostBody = {
   nowUrl: string;
@@ -71,33 +53,36 @@ function mirrorEntryUrl(): string {
 
 export default function ShareStep() {
   const result = useMirror((s) => s.result);
+  const statedAge = useMirror((s) => s.statedAge);
   const setStep = useMirror((s) => s.setStep);
-  const sun = useMirror((s) => s.sun);
-  const hyd = useMirror((s) => s.hyd);
-  const sleep = useMirror((s) => s.sleep);
-  const routine = useMirror((s) => s.routine);
 
   const [copied, setCopied] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
+  const [holdUrl, setHoldUrl] = useState<string | null>(null);
+  const [linkText, setLinkText] = useState<string | null>(null);
+  const shareOnPhone = useSyncExternalStore(subscribeShare, phoneCanShareFile, () => false);
+
+  useEffect(() => {
+    return () => {
+      if (holdUrl) URL.revokeObjectURL(holdUrl);
+    };
+  }, [holdUrl]);
 
   const cardData = useMemo(() => {
-    if (!result) return null;
-    const realAge = Math.round(result.aging.currentAge ?? 30);
-    // Future portrait = chronological age + 30, clamped to Perfect Corp outputs.
-    const desiredFuture = realAge + 30;
-    const futureAge = Math.min(result.aging.ageMax, Math.max(result.aging.ageMin, desiredFuture));
-    const nowPhoto = findClosestPhoto(result.aging.photos, realAge);
+    if (!result || statedAge == null) return null;
+    const portrait = futurePortrait(statedAge, result.aging.ageMin, result.aging.ageMax);
+    const futureAge = portrait.future;
+    const nowPhoto = findClosestPhoto(result.aging.photos, statedAge);
     const futurePhoto = findClosestPhoto(result.aging.photos, futureAge);
-    const score = compositeSkinScore(result.skin.concerns, { sun, hyd, sleep, routine });
-    const concern = topConcernWord(result.skin.concerns, { sun, hyd, sleep, routine });
+    const score = readingScore(result.skin);
+    const concern = lowestConcernWord(result.skin.concerns);
     const thisYear = new Date().getFullYear();
-    const yearsAhead = Math.max(0, Math.round(futureAge - realAge));
+    const yearsAhead = Math.max(0, Math.round(futureAge - statedAge));
     const futureYear = String(thisYear + yearsAhead);
-    const futureLabel = `AT ${futureAge}`;
+    const futureLabel = `AT ${Math.round(futureAge)}`;
 
     return {
-      realAge,
       futureAge,
       nowUrl: nowPhoto?.url ?? "",
       futureUrl: futurePhoto?.url ?? "",
@@ -107,15 +92,15 @@ export default function ShareStep() {
       futureYear,
       futureLabel,
     };
-  }, [result, sun, hyd, sleep, routine]);
+  }, [result, statedAge]);
 
   if (!result || !cardData) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ minHeight: "100dvh" }}>
+      <MirrorFrame className="items-center justify-center">
         <div className="font-serif text-lg" style={{ color: "rgba(42,40,38,0.5)" }}>
           No reading yet.
         </div>
-      </div>
+      </MirrorFrame>
     );
   }
 
@@ -168,61 +153,13 @@ export default function ShareStep() {
     return new Blob([ab], { type: "image/png" });
   }
 
-  const triggerDownloadFromBlob = (blob: Blob) => {
+  const showHoldCard = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "future-you-mirror.png";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1600);
-  };
-
-  const onSaveReading = async () => {
-    if (cardBusy) return;
-    setCardBusy(true);
-    setStatusText("Composing your card…");
-    try {
-      const blob = await fetchShareCardBlob();
-      triggerDownloadFromBlob(blob);
-      setStatusText("Saved to your downloads.");
-      setTimeout(() => setStatusText(null), 2200);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not save.";
-      setStatusText(msg);
-      setTimeout(() => setStatusText(null), 4000);
-    } finally {
-      setCardBusy(false);
-    }
-  };
-
-  /** Opens PNG in a new tab for long‑press Save; falls back to download if pop-ups are blocked. */
-  const onOpenImageTab = async () => {
-    if (cardBusy) return;
-    setCardBusy(true);
-    setStatusText("Opening PNG…");
-    try {
-      const blob = await fetchShareCardBlob();
-      const url = URL.createObjectURL(blob);
-      const popup = window.open(url, "_blank", "noopener,noreferrer");
-      if (!popup) {
-        triggerDownloadFromBlob(blob);
-        URL.revokeObjectURL(url);
-        setStatusText("Popup blocked — saved to downloads instead.");
-        setTimeout(() => setStatusText(null), 3400);
-        return;
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 180000);
-      setStatusText("In the image tab: use your browser menu to save.");
-      setTimeout(() => setStatusText(null), 4200);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not open PNG.";
-      setStatusText(msg);
-      setTimeout(() => setStatusText(null), 4000);
-    } finally {
-      setCardBusy(false);
-    }
+    setHoldUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return url;
+    });
+    setStatusText(HOLD_TO_SAVE);
   };
 
   const onCopyLink = async () => {
@@ -241,18 +178,19 @@ export default function ShareStep() {
         document.body.removeChild(ta);
       }
       setCopied(true);
+      setLinkText(null);
       setStatusText("Mirror link copied.");
       setTimeout(() => {
         setCopied(false);
         setStatusText(null);
       }, 2000);
     } catch {
-      setStatusText("Couldn't copy — long-press the address bar.");
-      setTimeout(() => setStatusText(null), 2600);
+      setLinkText(link);
+      setStatusText("Press and hold this link to copy it.");
     }
   };
 
-  const onShareStory = async () => {
+  const onShare = async () => {
     if (cardBusy) return;
     const pageUrl = mirrorEntryUrl();
     setCardBusy(true);
@@ -265,66 +203,47 @@ export default function ShareStep() {
         share?: (data: { files?: File[]; title?: string; text?: string; url?: string }) => Promise<void>;
       };
 
-      if (typeof nav.share === "function") {
-        const canFiles = typeof nav.canShare === "function" && nav.canShare({ files: [file] });
-        try {
-          if (canFiles) {
-            try {
-              await nav.share({
-                files: [file],
-                title: "Future You Mirror",
-                text: "A Future You Mirror reading. Not medical advice.",
-                url: pageUrl,
-              });
-            } catch {
-              await nav.share({
-                files: [file],
-                title: "Future You Mirror",
-                text: "A Future You Mirror reading. Not medical advice.",
-              });
-            }
-          } else {
-            await nav.share({
-              title: "Future You Mirror",
-              text: `A Future You Mirror reading. Not medical advice. ${pageUrl}`,
-              url: pageUrl,
-            });
-          }
-        } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") {
-            setStatusText(null);
-            return;
-          }
-          throw err;
-        }
-        setStatusText(null);
+      if (!shareOnPhone || typeof nav.share !== "function") {
+        downloadPng(blob);
+        setStatusText("Saved future-you-mirror.png");
         return;
       }
 
-      setStatusText("Sharing not available here — opening PNG…");
-      const url = URL.createObjectURL(blob);
-      const popup = window.open(url, "_blank", "noopener,noreferrer");
-      if (!popup) {
-        triggerDownloadFromBlob(blob);
-        URL.revokeObjectURL(url);
-        setStatusText("Saved to downloads instead.");
-        setTimeout(() => setStatusText(null), 3200);
-      } else {
-        setTimeout(() => URL.revokeObjectURL(url), 180000);
-        setStatusText("Use the image tab to save, or try on your phone for Instagram.");
-        setTimeout(() => setStatusText(null), 4200);
+      const canFiles = typeof nav.canShare === "function" && nav.canShare({ files: [file] });
+      try {
+        if (canFiles) {
+          await nav.share({
+            files: [file],
+            title: "Future You Mirror",
+            text: "A Future You Mirror reading. Not medical advice.",
+          });
+        } else {
+          await nav.share({
+            title: "Future You Mirror",
+            text: "A Future You Mirror reading. Not medical advice.",
+            url: pageUrl,
+          });
+        }
+        setStatusText(null);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          showHoldCard(blob);
+          return;
+        }
+        downloadPng(blob);
+        showHoldCard(blob);
+        setStatusText("Saved future-you-mirror.png");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not share.";
       setStatusText(msg);
-      setTimeout(() => setStatusText(null), 4000);
     } finally {
       setCardBusy(false);
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 pt-16 pb-12 max-w-md mx-auto w-full" style={{ minHeight: "100dvh" }}>
+    <MirrorFrame>
       <button
         onClick={() => setStep("insights")}
         className="text-[10px] uppercase self-start mb-6"
@@ -366,6 +285,14 @@ export default function ShareStep() {
               background: shareCardBackgroundFull,
             }}
           >
+            {holdUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={holdUrl}
+                alt="Your reading"
+                className="absolute inset-0 z-10 h-full w-full object-cover"
+              />
+            )}
 
             <div
               className="absolute"
@@ -626,98 +553,57 @@ export default function ShareStep() {
         </div>
       </div>
 
-      {/* Save — download card PNG */}
       <button
         type="button"
-        onClick={onSaveReading}
+        onClick={onShare}
         disabled={cardBusy}
         className="w-full rounded-full font-medium"
         style={{
-          height: 52,
-          fontSize: 14,
+          height: 56,
+          fontSize: 15,
           letterSpacing: "0.02em",
           background: "#A78B71",
           color: "#FBF8F3",
           opacity: cardBusy ? 0.6 : 1,
         }}
       >
-        {cardBusy ? "Working…" : "Save this reading"}
+        {cardBusy ? "Working…" : shareOnPhone ? "Share this reading" : "Save PNG"}
       </button>
 
-      {/* Save image opens tab; Story uses native share; Copy copies app link */}
-      <div className="grid grid-cols-3 gap-2 mt-3">
-        <button
-          type="button"
-          onClick={onOpenImageTab}
-          disabled={cardBusy}
-          className="rounded-full"
-          style={{
-            height: 64,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            background: "transparent",
-            color: "#2A2826",
-            border: "1px solid rgba(42,40,38,0.15)",
-            fontSize: 11,
-            letterSpacing: "0.02em",
-            opacity: cardBusy ? 0.55 : 1,
-          }}
+      <button
+        type="button"
+        onClick={onCopyLink}
+        className="w-full rounded-full font-medium mt-3"
+        style={{
+          height: 48,
+          fontSize: 14,
+          letterSpacing: "0.02em",
+          background: "transparent",
+          color: "#2A2826",
+          border: "1px solid rgba(42,40,38,0.18)",
+        }}
+      >
+        {copied ? "Copied" : "Copy link"}
+      </button>
+
+      {linkText && (
+        <p
+          className="mt-3 text-center break-all"
+          style={{ fontSize: 13, lineHeight: 1.4, color: "#2A2826" }}
         >
-          <SaveIcon />
-          <span>Save image</span>
-        </button>
-        <button
-          type="button"
-          onClick={onCopyLink}
-          className="rounded-full"
-          style={{
-            height: 64,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            background: "transparent",
-            color: "#2A2826",
-            border: "1px solid rgba(42,40,38,0.15)",
-            fontSize: 11,
-            letterSpacing: "0.02em",
-          }}
-        >
-          <LinkIcon />
-          <span>{copied ? "Copied" : "Copy link"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={onShareStory}
-          disabled={cardBusy}
-          className="rounded-full"
-          style={{
-            height: 64,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            background: "transparent",
-            color: "#2A2826",
-            border: "1px solid rgba(42,40,38,0.15)",
-            fontSize: 11,
-            letterSpacing: "0.02em",
-            opacity: cardBusy ? 0.55 : 1,
-          }}
-        >
-          <StoryIcon />
-          <span>Story</span>
-        </button>
-      </div>
+          {linkText}
+        </p>
+      )}
 
       <div
-        className="text-center mt-4 text-[11px]"
-        style={{ color: "rgba(42,40,38,0.55)", fontStyle: "italic", minHeight: 16 }}
+        className="text-center mt-4 text-[14px]"
+        style={{
+          color: "#6B5D52",
+          fontFamily: "var(--font-serif)",
+          fontStyle: "italic",
+          lineHeight: 1.4,
+          minHeight: 16,
+        }}
       >
         {statusText ?? " "}
       </div>
@@ -748,6 +634,6 @@ export default function ShareStep() {
           Made By Praneel S.
         </a>
       </div>
-    </div>
+    </MirrorFrame>
   );
 }
